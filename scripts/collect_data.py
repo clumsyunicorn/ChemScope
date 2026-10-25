@@ -118,7 +118,6 @@ def main():
             collected.append(path)
             print(f'{source_id}: {path.name} ({path.stat().st_size:,} bytes)')
 
-    # TEST FOR PROGRESS REPORT 2
     files_to_check = collected + ([fda] if fda.exists() else []) + composition
     print('Source files checked:', len(files_to_check))
     print('Empty source files:', sum(path.stat().st_size == 0 for path in files_to_check))

@@ -43,10 +43,6 @@ def parse_mrl(value, route):
         return value * factor[unit], 'mg/m3', False
     return None, '', True
 
-
-# ------------------------------------
-# TEST FOR PROGRESS REPORT 2
-
 # Print data checks without changing the records.
 def report_checks(result, coverage):
     required = ['chemical_id', 'original_value', 'exposure_route',

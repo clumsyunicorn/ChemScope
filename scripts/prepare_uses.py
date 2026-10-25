@@ -21,10 +21,6 @@ COSMETIC_FUNCTIONS = {
     'Listed UV filter': 'UV filter'
 }
 
-
-# ------------------------------------
-# TEST FOR PROGRESS REPORT 2
-
 # Check the chemical use records without changing any values.
 def report_checks(data):
     required = ['chemical_id', 'chemical_name', 'domain', 'jurisdiction',

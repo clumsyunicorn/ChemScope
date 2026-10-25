@@ -107,10 +107,6 @@ def main():
     print('Existing IDs retained; new chemicals must be assigned permanent unused IDs.')
     report_checks(data)
 
-
-# ------------------------------------
-# TEST FOR PROGRESS REPORT 2
-
 # Check the chemical records for missing and repeated values.
 def report_checks(data):
     print('\nTEST FOR PROGRESS REPORT 2')

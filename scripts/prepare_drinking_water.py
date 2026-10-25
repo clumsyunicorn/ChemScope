@@ -337,10 +337,6 @@ def main():
     save_csv(out,'chemscope_drinking_water_regulations.csv')
     save_csv(pd.DataFrame(coverage),'chemscope_drinking_water_coverage.csv')
 
-
-# ------------------------------------
-# TEST FOR PROGRESS REPORT 2
-
 # Print cleaning checks without changing the saved records.
 def report_checks(data, coverage):
     print('\nTEST FOR PROGRESS REPORT 2')

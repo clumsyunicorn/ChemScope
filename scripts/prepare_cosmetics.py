@@ -340,10 +340,6 @@ def main():
     save_csv(source_register,'chemscope_cosmetics_sources.csv')
     report_checks(data, len(entries))
 
-
-# ------------------------------------
-# TEST FOR PROGRESS REPORT 2
-
 # Print basic data cleaning checks without changing the records.
 def report_checks(data, original_count):
     print('\nTEST FOR PROGRESS REPORT 2')

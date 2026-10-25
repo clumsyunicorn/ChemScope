@@ -324,9 +324,6 @@ def main():
     save_csv(result,'chemscope_food_regulations.csv')
     save_csv(pd.DataFrame(coverage),'chemscope_food_coverage.csv')
 
-# ------------------------------------
-# TEST FOR PROGRESS REPORT 2
-
 # Print cleaning checks for the food records.
 def check_food_data(data):
     print('\nTEST FOR PROGRESS REPORT 2')

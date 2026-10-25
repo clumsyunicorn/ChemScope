@@ -1,0 +1,16 @@
+chemical_id,chemical_name,hazard_data_status
+CHEM001,Arsenic,ATSDR MRL extracted
+CHEM002,Lead,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM003,Bisphenol A,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM004,Titanium dioxide,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM005,Formaldehyde,ATSDR MRL extracted
+CHEM006,Triclosan,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM007,Salicylic acid,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM008,Hydroquinone,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM009,Mercury,ATSDR MRL extracted
+CHEM010,Benzene,ATSDR MRL extracted
+CHEM011,Atrazine,ATSDR MRL extracted
+CHEM012,Tartrazine,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM013,Aspartame,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM014,Sorbic acid,No usable ATSDR benchmark; check EPA IRIS / EFSA OpenFoodTox
+CHEM015,PFOA,ATSDR MRL extracted

@@ -1,0 +1,19 @@
+{
+  "generated_at_utc": "2026-10-25T01:25:52.757779+00:00",
+  "required_inputs_missing": [],
+  "optional_inputs_missing": [],
+  "counts": {
+    "chemicals": 15,
+    "sources": 14,
+    "regulations": 268,
+    "coverage": 54,
+    "chemical_uses": 262,
+    "hazard_benchmarks": 17,
+    "exposure_scenarios": 1,
+    "risk_assessments": 1
+  },
+  "regulation_records_requiring_review": 71,
+  "risk_readiness": "No risk scores until measured/scenario concentrations, route-compatible toxicology values, and scenario review are present",
+  "publishable_consumer_risk_scores": 0,
+  "regulatory_records_are_not_exposure_measurements": true
+}

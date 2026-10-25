@@ -1,14 +1,16 @@
-chemical_id,chemical_name,cas_number,dtxsid,primary_category,identity_source
-CHEM001,Arsenic,7440-38-2,DTXSID4023886,Drinking Water,EPA ChemExpo
-CHEM002,Lead,7439-92-1,DTXSID2024161,Drinking Water,EPA ChemExpo
-CHEM003,Bisphenol A,80-05-7,DTXSID7020182,Food / Drinking Water,EPA ChemExpo
-CHEM004,Titanium dioxide,13463-67-7,DTXSID3021352,Food / Cosmetics,EPA ChemExpo
-CHEM005,Formaldehyde,50-00-0,DTXSID7020637,Cosmetics,EPA ChemExpo
-CHEM006,Triclosan,3380-34-5,DTXSID5032498,Cosmetics,EPA ChemExpo
-CHEM007,Salicylic acid,69-72-7,DTXSID7026368,Cosmetics,EPA ChemExpo
-CHEM008,Hydroquinone,123-31-9,DTXSID7020716,Cosmetics,EPA ChemExpo
-CHEM009,Mercury,7439-97-6,DTXSID1024172,Cosmetics / Drinking Water,EPA ChemExpo
-CHEM010,Benzene,71-43-2,DTXSID3039242,Drinking Water,EPA ChemExpo
-CHEM011,Atrazine,1912-24-9,DTXSID9020112,Drinking Water,EPA ChemExpo
-CHEM013,Aspartame,22839-47-0,DTXSID0020107,Food,EPA ChemExpo
-CHEM015,PFOA,335-67-1,DTXSID8031865,Drinking Water,EPA ChemExpo
+chemical_id,chemical_name,cas_number,dtxsid,primary_category,identity_source,identity_match_method
+CHEM001,Arsenic,7440-38-2,DTXSID4023886,Drinking Water,EPA ChemExpo,Exact curated name or documented synonym
+CHEM002,Lead,7439-92-1,DTXSID2024161,Drinking Water,EPA ChemExpo,Exact curated name or documented synonym
+CHEM003,Bisphenol A,80-05-7,DTXSID7020182,Food / Drinking Water,EPA ChemExpo,Exact curated name or documented synonym
+CHEM004,Titanium dioxide,13463-67-7,DTXSID3021352,Food / Cosmetics,EPA ChemExpo,Exact curated name or documented synonym
+CHEM005,Formaldehyde,50-00-0,DTXSID7020637,Cosmetics,EPA ChemExpo,Exact curated name or documented synonym
+CHEM006,Triclosan,3380-34-5,DTXSID5032498,Cosmetics,EPA ChemExpo,Exact curated name or documented synonym
+CHEM007,Salicylic acid,69-72-7,DTXSID7026368,Cosmetics,EPA ChemExpo,Exact curated name or documented synonym
+CHEM008,Hydroquinone,123-31-9,DTXSID7020716,Cosmetics,EPA ChemExpo,Exact curated name or documented synonym
+CHEM009,Mercury,7439-97-6,DTXSID1024172,Cosmetics / Drinking Water,EPA ChemExpo,Exact curated name or documented synonym
+CHEM010,Benzene,71-43-2,DTXSID3039242,Drinking Water,EPA ChemExpo,Exact curated name or documented synonym
+CHEM011,Atrazine,1912-24-9,DTXSID9020112,Drinking Water,EPA ChemExpo,Exact curated name or documented synonym
+CHEM012,Tartrazine,1934-21-0,DTXSID1021455,Food,EPA ChemExpo,Exact curated name or documented synonym
+CHEM013,Aspartame,22839-47-0,DTXSID0020107,Food,EPA ChemExpo,Exact curated name or documented synonym
+CHEM014,Sorbic acid,110-44-1,DTXSID3021277,Food,EPA ChemExpo,Exact curated name or documented synonym
+CHEM015,PFOA,335-67-1,DTXSID8031865,Drinking Water,EPA ChemExpo,Exact curated name or documented synonym

@@ -1,0 +1,19 @@
+chemical_id,chemical_name,jurisdiction,domain,coverage_status,source_id,source_url
+CHEM004,Titanium dioxide,Canada,Cosmetics,No match in selected source,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM005,Formaldehyde,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM006,Triclosan,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM007,Salicylic acid,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM008,Hydroquinone,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM009,Mercury,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM004,Titanium dioxide,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM005,Formaldehyde,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM006,Triclosan,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM007,Salicylic acid,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM008,Hydroquinone,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM009,Mercury,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM004,Titanium dioxide,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM005,Formaldehyde,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM006,Triclosan,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM007,Salicylic acid,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM008,Hydroquinone,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM009,Mercury,United States,Cosmetics,Matching source entry,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics

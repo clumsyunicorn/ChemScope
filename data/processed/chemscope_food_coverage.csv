@@ -1,0 +1,16 @@
+chemical_id,chemical_name,jurisdiction,domain,coverage_status
+CHEM003,Bisphenol A,United States,Food,Source evidence found; legal interpretation pending
+CHEM004,Titanium dioxide,United States,Food,FDA chemical found; legal rule unavailable
+CHEM012,Tartrazine,United States,Food,FDA chemical found; legal rule unavailable
+CHEM013,Aspartame,United States,Food,FDA chemical found; legal rule unavailable
+CHEM014,Sorbic acid,United States,Food,FDA chemical found; legal rule unavailable
+CHEM003,Bisphenol A,Canada,Food,Source evidence found; legal interpretation pending
+CHEM004,Titanium dioxide,Canada,Food,Source evidence found; applicability conditional
+CHEM012,Tartrazine,Canada,Food,Source evidence found; applicability conditional
+CHEM013,Aspartame,Canada,Food,Source evidence found; applicability conditional
+CHEM014,Sorbic acid,Canada,Food,Source evidence found; applicability conditional
+CHEM003,Bisphenol A,European Union,Food,Relevant food-contact or additive legal source unavailable
+CHEM004,Titanium dioxide,European Union,Food,Relevant food-contact or additive legal source unavailable
+CHEM012,Tartrazine,European Union,Food,Source evidence found; applicability conditional
+CHEM013,Aspartame,European Union,Food,Source evidence found; applicability conditional
+CHEM014,Sorbic acid,European Union,Food,Source evidence found; applicability conditional

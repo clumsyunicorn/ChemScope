@@ -1,0 +1,4 @@
+jurisdiction,source_id,source_url,source_sha256,source_retrieved_at,extraction_method
+Canada,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html,c54c97e15ceaeae6cd0357bb08fe535de2634e4ec9e266050700f0e3307fe8b1,2026-10-24T18:21:03.535487+00:00,Health Canada Hotlist HTML table
+European Union,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518,0823070484dd5c7590098bd9ccbf6e921d647225cf8a7439970de8fb6cd99d8d,2026-10-24T19:59:09.248655+00:00,EUR-Lex annex HTML table
+United States,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics,64960ed5d5f38e82dd0173c0f71b5de1a809bb8e7365e2ecb84208b11e556035,2026-10-24T18:29:17.070522+00:00,FDA HTML document text

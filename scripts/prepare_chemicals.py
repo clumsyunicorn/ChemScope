@@ -1,442 +1,151 @@
-from pathlib import Path
-import pandas as pd
+"""Match the study chemicals with EPA ChemExpo data."""
+from difflib import SequenceMatcher
 import zipfile
 
+import pandas as pd
+from pipeline_common import RAW, PROCESSED, clean, normalize_name, save_csv, section, update_manifest
 
-# Find the main ChemScope project folder
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+# ------------------------------------
+# INITIAL STUDY COHORT
 
-RAW_DIR = PROJECT_DIR / "data" / "raw"
-
-PROCESSED_DIR = PROJECT_DIR / "data" / "processed"
-
-PROCESSED_DIR.mkdir(
-    parents=True,
-    exist_ok=True
-)
-
-
-print("Project folder:", PROJECT_DIR)
-print("Raw data folder:", RAW_DIR)
-print("Processed data folder:", PROCESSED_DIR)
-
-# ChemScope Version 1 chemical sample
-
-chemical_candidates = [
-    {
-        "chemical_name": "Arsenic",
-        "primary_category": "Drinking Water"
-    },
-    {
-        "chemical_name": "Lead",
-        "primary_category": "Drinking Water"
-    },
-    {
-        "chemical_name": "Bisphenol A",
-        "primary_category": "Food / Drinking Water"
-    },
-    {
-        "chemical_name": "Titanium dioxide",
-        "primary_category": "Food / Cosmetics"
-    },
-    {
-        "chemical_name": "Formaldehyde",
-        "primary_category": "Cosmetics"
-    },
-    {
-        "chemical_name": "Triclosan",
-        "primary_category": "Cosmetics"
-    },
-    {
-        "chemical_name": "Salicylic acid",
-        "primary_category": "Cosmetics"
-    },
-    {
-        "chemical_name": "Hydroquinone",
-        "primary_category": "Cosmetics"
-    },
-    {
-        "chemical_name": "Mercury",
-        "primary_category": "Cosmetics / Drinking Water"
-    },
-    {
-        "chemical_name": "Benzene",
-        "primary_category": "Drinking Water"
-    },
-    {
-        "chemical_name": "Atrazine",
-        "primary_category": "Drinking Water"
-    },
-    {
-        "chemical_name": "Tartrazine",
-        "primary_category": "Food"
-    },
-    {
-        "chemical_name": "Aspartame",
-        "primary_category": "Food"
-    },
-    {
-        "chemical_name": "Sorbic acid",
-        "primary_category": "Food"
-    },
-    {
-        "chemical_name": "PFOA",
-        "primary_category": "Drinking Water"
-    }
+# List the chemicals included in this project.
+COHORT = [
+    ('CHEM001', 'Arsenic', 'Drinking Water'),
+    ('CHEM002', 'Lead', 'Drinking Water'),
+    ('CHEM003', 'Bisphenol A', 'Food / Drinking Water'),
+    ('CHEM004', 'Titanium dioxide', 'Food / Cosmetics'),
+    ('CHEM005', 'Formaldehyde', 'Cosmetics'),
+    ('CHEM006', 'Triclosan', 'Cosmetics'),
+    ('CHEM007', 'Salicylic acid', 'Cosmetics'),
+    ('CHEM008', 'Hydroquinone', 'Cosmetics'),
+    ('CHEM009', 'Mercury', 'Cosmetics / Drinking Water'),
+    ('CHEM010', 'Benzene', 'Drinking Water'),
+    ('CHEM011', 'Atrazine', 'Drinking Water'),
+    ('CHEM012', 'Tartrazine', 'Food'),
+    ('CHEM013', 'Aspartame', 'Food'),
+    ('CHEM014', 'Sorbic acid', 'Food'),
+    ('CHEM015', 'PFOA', 'Drinking Water'),
 ]
 
-
-chemicals = pd.DataFrame(
-    chemical_candidates
-)
-
-
-print("\nCHEMSCOPE CANDIDATE CHEMICALS")
-
-print(chemicals)
-
-print(
-    "\nNumber of candidate chemicals:",
-    len(chemicals)
-)
-
-# Create ChemScope internal chemical IDs
-
-chemicals.insert(
-    0,
-    "chemical_id",
-    [
-        f"CHEM{i:03d}"
-        for i in range(
-            1,
-            len(chemicals) + 1
-        )
-    ]
-)
-
-
-print("\nCHEMICAL IDS")
-
-print(
-    chemicals[
-        [
-            "chemical_id",
-            "chemical_name",
-            "primary_category"
-        ]
-    ]
-)
-
-# Save the ChemScope chemical scope
-
-chemical_file = (
-    PROCESSED_DIR
-    / "chemscope_chemicals.csv"
-)
-
-chemicals.to_csv(
-    chemical_file,
-    index=False
-)
-
-
-print(
-    "\nSaved:",
-    chemical_file
-)
-
-# Find the EPA ChemExpo composition ZIP
-
-composition_files = list(
-    RAW_DIR.glob(
-        "ChemExpo_bulk_composition_chemicals_*.zip"
-    )
-)
-
-if not composition_files:
-    raise FileNotFoundError(
-        "EPA ChemExpo composition ZIP was not found."
-    )
-
-epa_composition_zip = composition_files[0]
-
-print(
-    "\nEPA composition file:",
-    epa_composition_zip.name
-)
-
-# Chemical names and aliases used for EPA identity matching
-
-chemical_aliases = {
-    "Arsenic": [
-        "arsenic"
-    ],
-
-    "Lead": [
-        "lead"
-    ],
-
-    "Bisphenol A": [
-        "bisphenol a"
-    ],
-
-    "Titanium dioxide": [
-        "titanium dioxide"
-    ],
-
-    "Formaldehyde": [
-        "formaldehyde"
-    ],
-
-    "Triclosan": [
-        "triclosan"
-    ],
-
-    "Salicylic acid": [
-        "salicylic acid"
-    ],
-
-    "Hydroquinone": [
-        "hydroquinone"
-    ],
-
-    "Mercury": [
-        "mercury"
-    ],
-
-    "Benzene": [
-        "benzene"
-    ],
-
-    "Atrazine": [
-        "atrazine"
-    ],
-
-    "Tartrazine": [
-    "tartrazine",
-    "c.i. acid yellow 23"
-    ],
-
-    "Aspartame": [
-        "aspartame"
-    ],
-
-    "Sorbic acid": [
-    "sorbic acid",
-    "2e,4e-hexadienoic acid"
-    ],
-
-    "PFOA": [
-        "pfoa",
-        "perfluorooctanoic acid"
-    ]
+# List other names used for matching chemicals.
+ALIASES = {
+    'Tartrazine': ['FD&C Yellow No. 5', 'C.I. Acid Yellow 23'],
+    'Sorbic acid': ['(2E,4E)-hexa-2,4-dienoic acid', '2e,4e-hexadienoic acid'],
+    'PFOA': ['perfluorooctanoic acid', 'pentadecafluorooctanoic acid'],
+    'Bisphenol A': ['4,4-isopropylidenediphenol', 'bisphenol a'],
 }
 
-# Search EPA ChemExpo for the 15 ChemScope chemicals
+# ------------------------------------
+# SOURCE IDENTITY MATCHING
 
-epa_identity_matches = []
-
-wanted_names = set()
-
-for aliases in chemical_aliases.values():
-    for alias in aliases:
-        wanted_names.add(
-            alias.strip().lower()
-        )
-
-
-with zipfile.ZipFile(
-    epa_composition_zip,
-    "r"
-) as archive:
-
-    csv_files = [
-        name
-        for name in archive.namelist()
-        if name.lower().endswith(".csv")
-    ]
-
-    if not csv_files:
-        raise ValueError(
-            "No CSV file was found inside the EPA ZIP."
-        )
-
-    epa_csv = csv_files[0]
-
-    print(
-        "\nSearching EPA chemical identities..."
-    )
-
-    with archive.open(epa_csv) as file:
-
-        for chunk in pd.read_csv(
-            file,
-            usecols=[
-                "Raw Chemical Name",
-                "Raw CAS",
-                "DTXSID",
-                "Curated Chemical Name",
-                "Curated CAS"
-            ],
-            chunksize=200000,
-            low_memory=False
-        ):
-
-            curated_names = (
-                chunk["Curated Chemical Name"]
-                .astype(str)
-                .str.strip()
-                .str.lower()
-            )
-
-            matching_rows = chunk[
-                curated_names.isin(
-                    wanted_names
-                )
-            ]
-
-            if not matching_rows.empty:
-                epa_identity_matches.append(
-                    matching_rows
-                )
+# Find matching chemical names in the EPA file.
+def chemexpo_candidates():
+    zips = sorted(RAW.glob('ChemExpo_bulk_composition_chemicals_*.zip'), key=lambda p:p.stat().st_mtime, reverse=True)
+    if not zips:
+        raise FileNotFoundError('Place official EPA ChemExpo composition ZIP in data/raw/')
+    update_manifest('epa_chemexpo_identity',zips[0],
+      'https://comptox.epa.gov/chemexpo/dl_co_chemicals/','Official bulk EPA ChemExpo ZIP')
+    with zipfile.ZipFile(zips[0]) as archive:
+        csvs = sorted(n for n in archive.namelist() if n.lower().endswith('.csv'))
+        if len(csvs) != 1:
+            raise ValueError('Ambiguous EPA composition ZIP: expected exactly one CSV')
+        targets = {normalize_name(v) for _, name, _ in COHORT for v in [name] + ALIASES.get(name, [])}
+        chunks = []
+        with archive.open(csvs[0]) as stream:
+            for chunk in pd.read_csv(stream, usecols=['Curated Chemical Name','Curated CAS','DTXSID'], dtype=str, chunksize=100000, low_memory=False):
+                matching = chunk['Curated Chemical Name'].map(normalize_name).isin(targets)
+                if matching.any():
+                    chunks.append(chunk.loc[matching].drop_duplicates())
+    if not chunks:
+        raise ValueError('No EPA identity records matched study cohort')
+    return pd.concat(chunks, ignore_index=True).drop_duplicates()
 
 
-if not epa_identity_matches:
-    raise ValueError(
-        "No ChemScope chemicals were found in EPA ChemExpo."
-    )
+# Match source records and keep the existing chemical IDs.
+def resolve(cohort, source, existing):
+    records = []
+    saved_by_id = existing.set_index('chemical_id') if not existing.empty else None
+    for chemical_id, name, category in cohort:
+        if saved_by_id is not None and chemical_id in saved_by_id.index:
+            saved = saved_by_id.loc[chemical_id]
+            if isinstance(saved, pd.DataFrame):
+                raise ValueError(f'Duplicate preserved ID: {chemical_id}')
+            if clean(saved['chemical_name']) != name:
+                raise ValueError(f'Existing identity {chemical_id} changed name: {name}; do not reassign IDs')
+        alias_set = {normalize_name(s) for s in [name] + ALIASES.get(name, [])}
+        matches = source[source['Curated Chemical Name'].map(normalize_name).isin(alias_set)]
+        identities = matches[['Curated CAS','DTXSID']].fillna('').drop_duplicates()
+        if len(identities) != 1:
+            raise ValueError(f'Identity ambiguous or missing for {name}: {identities.to_dict("records")}')
+        match = identities.iloc[0]
+        cas, dtx = clean(match['Curated CAS']), clean(match['DTXSID'])
+        if saved_by_id is not None and chemical_id in saved_by_id.index:
+            old_cas = clean(saved_by_id.loc[chemical_id].get('cas_number'))
+            if old_cas and old_cas != cas:
+                raise ValueError(f'CAS changed for {chemical_id} ({old_cas} => {cas}); review manually')
+        records.append({'chemical_id': chemical_id, 'chemical_name': name, 'cas_number': cas,
+                        'dtxsid': dtx, 'primary_category': category, 'identity_source': 'EPA ChemExpo',
+                        'identity_match_method': 'Exact curated name or documented synonym'})
+    return pd.DataFrame(records)
 
 
-epa_identity_matches = pd.concat(
-    epa_identity_matches,
-    ignore_index=True
-)
-
-print(
-    "EPA matching records found:",
-    len(epa_identity_matches)
-)
-
-# Keep unique EPA chemical identities
-
-epa_unique_identities = (
-    epa_identity_matches[
-        [
-            "Curated Chemical Name",
-            "Curated CAS",
-            "DTXSID"
-        ]
-    ]
-    .drop_duplicates()
-    .reset_index(drop=True)
-)
+# Save the chemical list and its source information.
+def main():
+    section('CHEMICAL IDENTITY ENRICHMENT')
+    target = PROCESSED / 'chemscope_chemicals_identified.csv'
+    existing = pd.read_csv(target, dtype=str).fillna('') if target.exists() else pd.DataFrame()
+    source = chemexpo_candidates()
+    data = resolve(COHORT, source, existing)
+    if not existing.empty:
+        extra = existing[~existing.chemical_id.isin(data.chemical_id)]
+        if not extra.empty:
+            data = pd.concat([data, extra], ignore_index=True)
+    if data.chemical_id.duplicated().any() or data.cas_number.duplicated().any():
+        raise ValueError('Duplicate ID or CAS number after enrichment')
+    save_csv(data, 'chemscope_chemicals_identified.csv')
+    save_csv(data[['chemical_id','chemical_name','primary_category']], 'chemscope_chemicals.csv')
+    print('Existing IDs retained; new chemicals must be assigned permanent unused IDs.')
+    report_checks(data)
 
 
-print("\nUNIQUE EPA IDENTITIES")
+# ------------------------------------
+# TEST FOR PROGRESS REPORT 2
 
-print(
-    epa_unique_identities
-)
+# Check the chemical records for missing and repeated values.
+def report_checks(data):
+    print('\nTEST FOR PROGRESS REPORT 2')
+    text = data.astype('string')
+    missing = text.isna() | text.apply(lambda column: column.str.strip().eq(''))
+    print('Missing values by column:', missing.sum().to_dict())
 
-# Match EPA identities to ChemScope chemicals
+    placeholders = {'na', 'n/a', 'nan', 'null', 'none', 'missing', 'unknown', '-999', '9999', '8888'}
+    sentinel_count = sum(text[column].fillna('').str.strip().str.lower().isin(placeholders).sum()
+                         for column in text.columns)
+    print('Placeholder values:', int(sentinel_count))
+    print('Column types:', {column: str(dtype) for column, dtype in data.dtypes.items()})
 
-identity_records = []
+    print('Exact duplicate rows:', int(data.duplicated().sum()))
+    print('Duplicate chemical IDs:', int(data.chemical_id.duplicated().sum()))
+    print('Duplicate CAS numbers:', int(data.cas_number.duplicated().sum()))
 
+    names = data.chemical_name.fillna('').map(normalize_name).tolist()
+    similar = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            if names[i] and names[j] and SequenceMatcher(None, names[i], names[j]).ratio() >= 0.90:
+                similar.append((data.iloc[i].chemical_name, data.iloc[j].chemical_name))
+    print('Similar chemical names:', similar)
 
-for _, chemical in chemicals.iterrows():
+    categories = set(data.primary_category.fillna('').astype(str).str.strip())
+    expected = {category for _, _, category in COHORT}
+    print('Unexpected categories:', sorted(categories - expected))
 
-    chemical_name = chemical[
-        "chemical_name"
-    ]
-
-    aliases = chemical_aliases[
-        chemical_name
-    ]
-
-    aliases_lower = [
-        alias.lower()
-        for alias in aliases
-    ]
-
-    matches = epa_unique_identities[
-        epa_unique_identities[
-            "Curated Chemical Name"
-        ]
-        .astype(str)
-        .str.strip()
-        .str.lower()
-        .isin(aliases_lower)
-    ]
-
-
-    if len(matches) == 1:
-
-        match = matches.iloc[0]
-
-        identity_records.append(
-            {
-                "chemical_id":
-                    chemical["chemical_id"],
-
-                "chemical_name":
-                    chemical_name,
-
-                "cas_number":
-                    match["Curated CAS"],
-
-                "dtxsid":
-                    match["DTXSID"],
-
-                "primary_category":
-                    chemical["primary_category"],
-
-                "identity_source":
-                    "EPA ChemExpo"
-            }
-        )
-
-    elif len(matches) == 0:
-
-        print(
-            "\nNO EXACT EPA MATCH:",
-            chemical_name
-        )
-
-    else:
-
-        print(
-            "\nMULTIPLE EPA MATCHES:",
-            chemical_name
-        )
-
-        print(matches)
+    ids = data.chemical_id.fillna('').astype(str)
+    cas = data.cas_number.fillna('').astype(str)
+    print('Invalid chemical ID formats:', int((~ids.str.fullmatch(r'CHEM\d{3}')).sum()))
+    print('Invalid CAS formats:', int((~cas.str.fullmatch(r'\d{2,7}-\d{2}-\d')).sum()))
+    print('Numeric range checks: not applicable to chemical identities')
 
 
-identified_chemicals = pd.DataFrame(
-    identity_records
-)
-
-
-print("\nIDENTIFIED CHEMSCOPE CHEMICALS")
-
-print(
-    identified_chemicals
-)
-
-# Save identified ChemScope chemicals
-
-identified_file = (
-    PROCESSED_DIR
-    / "chemscope_chemicals_identified.csv"
-)
-
-identified_chemicals.to_csv(
-    identified_file,
-    index=False
-)
-
-
-print(
-    "\nSaved identified chemicals:",
-    identified_file
-)
+if __name__ == '__main__':
+    main()

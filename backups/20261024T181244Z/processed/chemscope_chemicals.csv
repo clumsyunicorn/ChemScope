@@ -1,0 +1,16 @@
+chemical_id,chemical_name,primary_category
+CHEM001,Arsenic,Drinking Water
+CHEM002,Lead,Drinking Water
+CHEM003,Bisphenol A,Food / Drinking Water
+CHEM004,Titanium dioxide,Food / Cosmetics
+CHEM005,Formaldehyde,Cosmetics
+CHEM006,Triclosan,Cosmetics
+CHEM007,Salicylic acid,Cosmetics
+CHEM008,Hydroquinone,Cosmetics
+CHEM009,Mercury,Cosmetics / Drinking Water
+CHEM010,Benzene,Drinking Water
+CHEM011,Atrazine,Drinking Water
+CHEM012,Tartrazine,Food
+CHEM013,Aspartame,Food
+CHEM014,Sorbic acid,Food
+CHEM015,PFOA,Drinking Water

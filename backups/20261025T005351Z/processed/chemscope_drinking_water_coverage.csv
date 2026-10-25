@@ -1,0 +1,22 @@
+chemical_id,chemical_name,jurisdiction,domain,coverage_status,source_id,source_url
+CHEM001,Arsenic,United States,Drinking Water,Extracted source record,us_water,https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations
+CHEM002,Lead,United States,Drinking Water,Extracted source record,us_water,https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations
+CHEM003,Bisphenol A,United States,Drinking Water,Not listed in selected source,us_water,https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations
+CHEM009,Mercury,United States,Drinking Water,Extracted source record,us_water,https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations
+CHEM010,Benzene,United States,Drinking Water,Extracted source record,us_water,https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations
+CHEM011,Atrazine,United States,Drinking Water,Extracted source record,us_water,https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations
+CHEM015,PFOA,United States,Drinking Water,Extracted source record,us_water,https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations
+CHEM001,Arsenic,Canada,Drinking Water,Extracted source record,ca_water,https://www.canada.ca/en/health-canada/services/environmental-workplace-health/reports-publications/water-quality/guidelines-canadian-drinking-water-quality-summary-table.html
+CHEM002,Lead,Canada,Drinking Water,Extracted source record,ca_water,https://www.canada.ca/en/health-canada/services/environmental-workplace-health/reports-publications/water-quality/guidelines-canadian-drinking-water-quality-summary-table.html
+CHEM003,Bisphenol A,Canada,Drinking Water,Not listed in selected source,ca_water,https://www.canada.ca/en/health-canada/services/environmental-workplace-health/reports-publications/water-quality/guidelines-canadian-drinking-water-quality-summary-table.html
+CHEM009,Mercury,Canada,Drinking Water,Extracted source record,ca_water,https://www.canada.ca/en/health-canada/services/environmental-workplace-health/reports-publications/water-quality/guidelines-canadian-drinking-water-quality-summary-table.html
+CHEM010,Benzene,Canada,Drinking Water,Extracted source record,ca_water,https://www.canada.ca/en/health-canada/services/environmental-workplace-health/reports-publications/water-quality/guidelines-canadian-drinking-water-quality-summary-table.html
+CHEM011,Atrazine,Canada,Drinking Water,Extracted source record,ca_water,https://www.canada.ca/en/health-canada/services/environmental-workplace-health/reports-publications/water-quality/guidelines-canadian-drinking-water-quality-summary-table.html
+CHEM015,PFOA,Canada,Drinking Water,Extracted source record,ca_water,https://www.canada.ca/en/health-canada/services/environmental-workplace-health/reports-publications/water-quality/guidelines-canadian-drinking-water-quality-summary-table.html
+CHEM001,Arsenic,European Union,Drinking Water,Extracted source record,eu_water,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184
+CHEM002,Lead,European Union,Drinking Water,Extracted source record,eu_water,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184
+CHEM003,Bisphenol A,European Union,Drinking Water,Extracted source record,eu_water,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184
+CHEM009,Mercury,European Union,Drinking Water,Extracted source record,eu_water,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184
+CHEM010,Benzene,European Union,Drinking Water,Extracted source record,eu_water,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184
+CHEM011,Atrazine,European Union,Drinking Water,Extracted source record,eu_water,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184
+CHEM015,PFOA,European Union,Drinking Water,Extracted source record,eu_water,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184

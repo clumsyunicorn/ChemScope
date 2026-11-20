@@ -5,8 +5,7 @@ import re
 import pandas as pd
 from pipeline_common import PROCESSED, save_csv, section
 
-# ------------------------------------
-# CHEMICAL USE RECORDS
+# Chemical use records
 
 FILES = {
     'Food': 'chemscope_food_regulations.csv',
@@ -21,7 +20,6 @@ COSMETIC_FUNCTIONS = {
     'Listed UV filter': 'UV filter'
 }
 
-# Check the chemical use records without changing any values.
 def report_checks(data):
     required = ['chemical_id', 'chemical_name', 'domain', 'jurisdiction',
                 'source_id', 'source_url', 'source_record_text']
@@ -44,7 +42,7 @@ def report_checks(data):
     water = data['domain'].eq('Drinking Water')
     water_label = 'Regulated water contaminant; not an intentional use'
 
-    print('\nTEST FOR PROGRESS REPORT 2')
+    print('\nDATA QUALITY CHECKS')
     print('Records checked:', len(data))
     print('Missing required fields:', int(missing.sum()))
     print('Placeholder values:', int(placeholder_count))
@@ -59,10 +57,8 @@ def report_checks(data):
     print('Numeric range checks: not applicable')
 
 
-# ------------------------------------
-# BUILD CHEMICAL USE RECORDS
+# Build chemical use records
 
-# Read regulatory files and save chemical use records.
 def main():
     section('Chemical uses and product applications')
     entries = []

@@ -2,80 +2,98 @@
 from __future__ import annotations
 import json
 import re
-from datetime import date, timedelta
-from io import StringIO
-from bs4 import BeautifulSoup
+from datetime import timedelta
 from dateutil import parser as date_parser
 
 import pandas as pd
-from pipeline_common import (chemical_domain, clean, html_tables, identity_frame,
-                             normalize_name, parse_limit, save_csv, section,
-                             source_file, source_ref)
-from source_catalog import SOURCES
-
-# ------------------------------------
-# EXTRACT REGULATORY TABLES
+from lxml import html
+from collect_data import ecfr_tables, ecfr_text, extract_ecfr_sections, register_ecfr_sections, saved_ecfr_bulk
+from pipeline_common import (cas_tokens, clean, identity_aliases, identity_frame,
+                             match_identity, match_source_identity, normalize_name, parse_number, save_csv,
+                             section, source_file, source_ref)
+from source_catalog import FDA_BOTTLED_WATER_RULE, SOURCES
 
 DOMAIN = 'Drinking Water'
-EXPECTED = ['Arsenic', 'Lead', 'Bisphenol A', 'Mercury', 'Benzene', 'Atrazine', 'PFOA']
+WATER_UNIT = r'(?:mg\s*/\s*l|[µμu]g\s*/\s*l|ng\s*/\s*l|ppm|ppb|ppt)'
+CHEMICAL_FORM = re.compile(r'\s+\((?:inorganic|organic|as [^()]+)\)\s*$', re.I)
+TO_MG_PER_LITER = {'mg/l': 1.0, 'ppm': 1.0, 'μg/l': 0.001, 'ug/l': 0.001,
+                   'ppb': 0.001, 'ng/l': 0.000001, 'ppt': 0.000001}
 
 
-# Find a source table using words from its contents.
-def find_table(tables, required_words, *, include_columns=True):
-    candidates = []
-    for i, table in enumerate(tables):
-        sample = table.astype(str).to_string(index=False).lower()
-        if include_columns:
-            sample += ' ' + ' '.join(map(str, table.columns)).lower()
-        if all(word.lower() in sample for word in required_words):
-            candidates.append((i, table))
-    if not candidates:
-        raise ValueError(f'No table contains {required_words}')
-    return max(candidates, key=lambda item: len(item[1]))
+def water_cells(row):
+    return row.xpath('./th | ./td')
 
 
-# Find a column using parts of its heading.
-def column_like(table, *patterns):
-    for col in table.columns:
-        name = clean(col).lower()
-        if all(p.lower() in name for p in patterns):
-            return col
-    raise KeyError(f'Column matching {patterns} absent: {list(table.columns)}')
+def water_tables(document):
+    for table in document.iter('table'):
+        rows = table.xpath('./tr | ./thead/tr | ./tbody/tr')
+        if rows:
+            yield [clean(cell.text_content()) for cell in water_cells(rows[0])], rows[1:]
 
 
-# Find one matching chemical or parameter row.
-def source_row(frame, col, target):
-    names = frame[col].map(normalize_name)
-    wanted = normalize_name(target)
-    matches = frame[names == wanted]
-    if len(matches) != 1:
-        raise ValueError(f'{target}: required unique source row, found {len(matches)}')
-    return matches.iloc[0]
+def water_identity(parameter, identities, aliases):
+    chemical, method, _ = match_identity(parameter, '', identities, aliases)
+    if chemical is not None:
+        return chemical, method
+    name = re.sub(r'\s*\(\d{4}(?:,\s*\d{4})?\)\s*$', '', parameter)
+    name = CHEMICAL_FORM.sub('', name)
+    chemical, method, _ = match_identity(name, '', identities, aliases)
+    if chemical is not None:
+        return chemical, method
+    # Some parameter cells give a long name followed by its abbreviation.
+    alternate = re.fullmatch(r'(.+?)\s*\(((?=[A-Za-z\d-]*[A-Z])[A-Za-z\d-]{2,})\)', name)
+    if alternate:
+        short, short_method, _ = match_identity(alternate[2], '', identities, aliases)
+        long, long_method, _ = match_identity(alternate[1], '', identities, aliases)
+        if short is not None and long is not None and short['chemical_id'] != long['chemical_id']:
+            return None, 'Ambiguous source names'
+        return (short, short_method) if short is not None else (long, long_method)
+    return None, method
 
 
-# Convert water concentration values to mg/L.
-def amount(value, column_label, *, unit_override=None):
-    raw = clean(value)
-    label = clean(column_label)
-    combined = raw + ' ' + label
-    unit_match = re.search(r'(?:\bmg\s*/\s*l\b|\bµg\s*/\s*l\b|\bμg\s*/\s*l\b|\bug\s*/\s*l\b|\bppt\b|\bppb\b|\bppm\b)', combined, re.I)
-    unit = unit_override or (unit_match.group().lower().replace(' ', '') if unit_match else '')
-    match = re.search(r'(?<!\d)\d+(?:[.,]\d+)?', raw.replace('\xa0', ' '))
-    if not match or not unit:
-        return None, unit, 'Unit or numeric value missing; cannot safely convert'
-    number = float(match.group(0).replace(',', '.'))
-    multiplier = {'mg/l': 1.0, 'ppm': 1.0, 'µg/l': 0.001, 'μg/l': 0.001,
-                  'ug/l': 0.001, 'ppb': 0.001, 'ppt': 0.000001}
-    return number * multiplier[unit], unit, ''
+def amount(value, column_label, *, unit_override=None, decimal_comma=None):
+    # Remove known table notes only from the text used for conversion.
+    cell = re.sub(r'\s*\*+$', '', clean(value))
+    cell = re.sub(
+        r'^(?:(?:TT\d*;\s*)?Action level\s*=\s*|MRDL\s*=\s*|(?:Objective|AO|OG|HBV):\s*)', '', cell, flags=re.I
+    )
+    cell = re.sub(r'\s+(?:ALARA|as of \d{1,2}/\d{1,2}/\d{2}(?:\d{2})?)$', '', cell, flags=re.I)
+
+    cell_unit = re.search(WATER_UNIT + r'$', cell, re.I)
+    heading_units = re.findall(rf'\b{WATER_UNIT}\b', clean(column_label), re.I)
+    if len(heading_units) > 1:
+        return None, '', 'Column lists more than one water unit'
+    heading_unit = heading_units[0] if heading_units else clean(unit_override)
+    unit = cell_unit.group() if cell_unit else heading_unit
+    factor = TO_MG_PER_LITER.get(unit.casefold().replace(' ', ''))
+    if factor is None:
+        return None, unit, 'Missing or unsupported water unit'
+    if heading_unit and TO_MG_PER_LITER.get(heading_unit.casefold().replace(' ', '')) != factor:
+        return None, unit, 'Value and column use different water units'
+
+    number_text = cell[:cell_unit.start()] if cell_unit else cell
+    number = parse_number(number_text, decimal_comma=decimal_comma)
+    if number is None:
+        return None, unit, 'Water value is not a single nonnegative number'
+    return number * factor, unit, ''
 
 
-# Create a water regulation record from a source row.
 def build_record(chemical, jurisdiction, row, parameter, value, value_label, rule_type,
                  source_id, url, relationship='Direct chemical-specific record',
-                 effective_from='', effective_until='', note='', unit_override=None):
-    norm, original_unit, error = amount(value, value_label, unit_override=unit_override)
+                 effective_from='', effective_until='', note='', unit_override=None,
+                 match_method='Exact parameter'):
+    norm, original_unit, error = amount(
+        value, value_label, unit_override=unit_override, decimal_comma=jurisdiction == 'European Union'
+    )
     group_based = relationship != 'Direct chemical-specific record'
-    review_note = error or ('Group limit is not an individual chemical limit' if group_based else '')
+    form = bool(CHEMICAL_FORM.search(parameter) or re.search(
+        r'\b(?:all forms of|as the free (?:acid|base)|expressed as)\b', note, re.I,
+    ))
+    review_note = error
+    if group_based and not error:
+        review_note = 'Group limit is not an individual chemical limit'
+    elif form and not error:
+        review_note = 'Check the chemical form or reporting basis before comparing'
     src = source_ref(source_id, url)
     return {'chemical_id': chemical['chemical_id'], 'chemical_name': chemical['chemical_name'],
             'cas_number': chemical['cas_number'], 'jurisdiction': jurisdiction,
@@ -85,261 +103,370 @@ def build_record(chemical, jurisdiction, row, parameter, value, value_label, rul
                                   else 'Regulated parameter' if norm is not None else 'Source entry needs review'),
             'original_limit': clean(value), 'original_unit': original_unit,
             'numeric_limit_value': norm, 'numeric_limit_unit': 'mg/L' if norm is not None else '',
-            'limit_scope': 'Group' if relationship != 'Direct chemical-specific record' else 'Individual',
-            'limit_group': parameter if relationship != 'Direct chemical-specific record' else '',
+            'limit_scope': 'Group' if group_based else 'Individual',
+            'limit_group': parameter if group_based else '',
             'product_category': 'Public drinking water', 'conditions': note,
             'effective_from': effective_from, 'effective_until': effective_until,
-            'match_method': 'Exact parameter' if not group_based else 'Group association requiring review',
+            'match_method': match_method if not group_based else 'Group association requiring review',
             'source_record_name': parameter, 'source_record_text': json.dumps({str(k): clean(v) for k,v in row.items()}, ensure_ascii=False),
             'regulation_reference': value_label, 'needs_review': bool(review_note), 'review_reason': review_note,
             'extraction_method': 'HTML table extraction', **src}
 
 
-# Read the source tables and save the water records.
+def epa_water(document, identities, aliases, url):
+    records = []
+    tables = 0
+    for headings, rows in water_tables(document):
+        if 'Contaminant' not in headings:
+            continue
+        limit = next((i for i, title in enumerate(headings) if re.match(r'^MCL(?!G)', title)), None)
+        if limit is None:
+            continue
+        tables += 1
+        name = headings.index('Contaminant')
+        for row in rows:
+            cells = water_cells(row)
+            if len(cells) != len(headings):
+                continue
+            values = [clean(cell.text_content()) for cell in cells]
+            data = dict(zip(headings, values))
+            labels = [clean(p.text_content()) for p in cells[name].xpath('./p') if clean(p.text_content())]
+            parameter = labels[0] if labels else values[name]
+            chemical, method = water_identity(parameter, identities, aliases)
+            value = values[limit]
+            if chemical is None or value.casefold() in ('', '—', '-', 'no individual mcl'):
+                continue
+            action = bool(re.search(r'\baction level\b', value, re.I))
+            rule = ('Action level (treatment technique)' if action else
+                    'Treatment technique' if re.match(r'^TT\b|^TT\d', value, re.I) else
+                    'Maximum Residual Disinfectant Level' if value.startswith('MRDL=') else
+                    'Maximum Contaminant Level')
+            note = ''
+            for link in cells[limit].xpath('.//a[starts-with(@href,"#")]'):
+                anchor = document.get_element_by_id(link.get('href')[1:], None)
+                paragraphs = anchor.xpath('ancestor-or-self::p[1]') if anchor is not None else []
+                if paragraphs:
+                    note = clean(paragraphs[0].text_content())
+                    data['Limit footnote'] = note
+                    break
+            amount_cell = clean(''.join(cells[limit].xpath('.//text()[not(ancestor::sup)]')))
+            entry = build_record(chemical, 'United States', data, parameter, amount_cell, headings[limit],
+                                 rule, 'us_water', url, note=note, match_method=method)
+            entry['original_limit'] = value
+            dated = re.search(r'\bas of (\d{1,2}/\d{1,2}/\d{2}(?:\d{2})?)$', amount_cell, re.I)
+            if dated:
+                try:
+                    entry['effective_from'] = date_parser.parse(dated[1]).date().isoformat()
+                except ValueError:
+                    entry.update(needs_review=True, review_reason='EPA limit date could not be read')
+            if rule == 'Treatment technique' and re.fullmatch(r'TT\d*', value, re.I):
+                entry.update(regulatory_status='Treatment technique requirement',
+                             needs_review=False, review_reason='')
+            records.append(entry)
+            if not action or not (value.endswith('*') or 'revised' in note.casefold()):
+                continue
+            change = re.search(
+                r'\bBeginning on\b.*?\b([A-Za-z]+\s+\d{1,2},\s+\d{4})\b[^.]*?'
+                r'\brevised\s+' + re.escape(parameter) + r'\s+action level of\s+'
+                r'(\d+(?:\.\d+)?\s*' + WATER_UNIT + r')(?=\s|\.|$)', note, re.I,
+            )
+            if not change:
+                entry.update(needs_review=True, review_reason='Revised action level or compliance date is unclear')
+                continue
+            try:
+                start = date_parser.parse(change[1]).date()
+            except ValueError:
+                entry.update(needs_review=True, review_reason='Revised action level date could not be read')
+                continue
+            entry['effective_until'] = (start - timedelta(days=1)).isoformat()
+            if not entry['needs_review']:
+                entry['regulatory_status'] = 'Action level through ' + entry['effective_until']
+            records.append(build_record(
+                chemical, 'United States', data, parameter, change[2], 'EPA revised action level',
+                rule, 'us_water', url, effective_from=start.isoformat(), note=note, match_method=method,
+            ))
+    if not tables:
+        raise ValueError('EPA contaminant and limit columns were not found')
+    return records
+
+
+def fda_bottled_water(path, identities, aliases):
+    number = '165.110'
+    provision = extract_ecfr_sections(path, (number,)).get(number)
+    if provision is None:
+        raise ValueError('The FDA bottled-water section is missing from Title 21')
+    source_id, url = register_ecfr_sections((number,))[number]
+    paragraphs = [ecfr_text(node) for node in provision.findall('P')]
+    quality = next((text for text in paragraphs if text.startswith('(iii) Having consulted with EPA')), '')
+    if not quality:
+        raise ValueError('The bottled-water chemical quality clause could not be identified')
+    records = []
+    for block, rows in ecfr_tables(provision):
+        heading = ecfr_text(block.getprevious())
+        clause = re.match(r'^\(([A-Z])\) The allowable levels for .+ are as follows:', heading)
+        fields = [ecfr_text(cell) for cell in rows[0]]
+        if not clause or len(fields) != 2 or 'milligrams per liter' not in fields[1].casefold():
+            continue
+        reference = f'21 CFR {number}(b)(4)(iii)({clause[1]})'
+        for row in rows[1:]:
+            cells = [ecfr_text(cell) for cell in row]
+            if len(cells) != 2 or not cells[1]:
+                continue
+            parameter, value = cells
+            cas = cas_tokens(parameter)
+            name = re.sub(r'\s*\(\d{2,7}-\d{2}-\d\)\s*$', '', parameter)
+            if cas:
+                chemical, method = match_source_identity(name, parameter, identities, aliases)
+            else:
+                chemical, method = water_identity(name, identities, aliases)
+            if chemical is None:
+                continue
+            notes = [heading, *[text for text in paragraphs
+                                if re.match(r'^\(\d+\) ' + re.escape(name) + r' shall be measured as ', text, re.I)]]
+            data = dict(zip(fields, cells)) | {'Chemical quality clause': quality, 'Table heading': heading}
+            entry = build_record(
+                chemical, 'United States', data, parameter, value, fields[1], FDA_BOTTLED_WATER_RULE,
+                source_id, url, note=' '.join(notes), unit_override='mg/L', match_method=method,
+            )
+            entry.update(regulation_reference=reference, regulation_domain='Bottled water',
+                         product_category='Bottled water', extraction_method='eCFR chemical quality table')
+            records.append(entry)
+    return records
+
+
+def canada_water(document, identities, aliases, url):
+    records, pesticides = [], {}
+    tables = [(headings, rows) for headings, rows in water_tables(document)
+              if any(col.startswith('Parameter') for col in headings)
+              and any(col.startswith('MAC (mg/L)') for col in headings)]
+    if len(tables) != 1:
+        raise ValueError('Expected one Health Canada chemical guideline table')
+    headings, rows = tables[0]
+    parameter_col = next(i for i, col in enumerate(headings) if col.startswith('Parameter'))
+    mac = next(col for col in headings if col.startswith('MAC (mg/L)'))
+    other = next((col for col in headings if col.startswith('Other value (mg/L)')), '')
+    type_col = next((col for col in headings if col.startswith('Type')), '')
+    provenance = source_ref('ca_water', url)
+    for row in rows:
+        cells = water_cells(row)
+        if len(cells) != len(headings):
+            continue
+        data = dict(zip(headings, [clean(cell.text_content()) for cell in cells]))
+        links = cells[parameter_col].xpath('.//a[@href]')
+        parameter = clean(links[0].text_content()) if links else data[headings[parameter_col]]
+        chemical, method = water_identity(parameter, identities, aliases)
+        if chemical is None:
+            continue
+        if data.get(type_col) == 'P':
+            pesticides[chemical['chemical_id']] = {'row': data, **provenance}
+        note = data.get('Applying the Guideline and Comments', '')
+        field, value, rule = mac, data[mac], 'Maximum Acceptable Concentration'
+        if value in ('', '—', '-') and other:
+            field, value = other, data[other]
+            rule = {'AO': 'Aesthetic objective', 'OG': 'Operational guidance',
+                    'HBV': 'Health-based value', 'Objective': 'Drinking water objective'}.get(
+                        value.partition(':')[0], 'Other guideline value')
+        if value in ('', '—', '-'):
+            continue
+        group = bool(re.search(r'\b(?:applies to|is for)\s+(?:the\s+)?sum of\b', note, re.I))
+        entry = build_record(
+            chemical, 'Canada', data, parameter, value, field, rule, 'ca_water', url,
+            relationship='Group-based record' if group else 'Direct chemical-specific record',
+            note=note, match_method=method,
+        )
+        if re.fullmatch(r'(?:none|no guideline) required\.?', value, re.I):
+            entry.update(regulation_type='No numerical guideline', regulatory_status='Guideline value not required',
+                         needs_review=False, review_reason='')
+        records.append(entry)
+    return records, pesticides
+
+
+def canada_water_objective(document, identities, url):
+    pattern = re.compile(r'\bobjective of\s+(\d+(?:\.\d+)?)\s*(' + WATER_UNIT +
+                         r')\s+applies to the sum of\s+(\d+)\s+specified\b', re.I)
+    paragraphs = (clean(p.text_content()) for p in document.iter('p'))
+    evidence = next((text for text in paragraphs if pattern.search(text)), '')
+    objective = pattern.search(evidence)
+    tables = [(headings, rows) for headings, rows in water_tables(document)
+              if headings and 'Abbreviation and CASRN' in headings[0]]
+    if not objective or len(tables) != 1:
+        raise ValueError('Canadian group objective or its membership table could not be verified')
+    headings, rows = tables[0]
+    members = [dict(zip(headings, [clean(cell.text_content()) for cell in water_cells(row)]))
+               for row in rows if len(water_cells(row)) == len(headings)]
+    if len(members) != int(objective[3]):
+        raise ValueError('Canadian objective membership table has an unexpected number of rows')
+    name = clean(re.sub(r'^Objective for Canadian drinking water quality\W+', '',
+                        document.xpath('string(//h1)')))
+    records = []
+    for member in members:
+        chemical, _, _ = match_identity('', member[headings[0]], identities)
+        if chemical is not None:
+            member['Objective wording'] = evidence
+            records.append(build_record(
+                chemical, 'Canada', member, name, objective[1] + ' ' + objective[2],
+                'Health Canada group objective', 'Group objective', 'ca_water_pfas', url,
+                relationship='Group-based record', note=evidence,
+            ))
+    return records
+
+
+def eu_pfas_members(document, identities, aliases):
+    members = {}
+    headings = document.xpath('//*[@id="anx_III"]//p[not(ancestor::table)]')
+    for heading in headings:
+        if not re.fullmatch(r'\d+\.\s+Sum of PFAS', clean(heading.text_content()), re.I):
+            continue
+        in_list = False
+        for sibling in heading.itersiblings():
+            if sibling.tag != 'table':
+                if in_list:
+                    break
+                continue
+            in_list = True
+            cells = sibling.xpath('.//tr/td[last()]')
+            if len(cells) != 1:
+                break
+            member = clean(cells[0].text_content())
+            chemical, _ = water_identity(member, identities, aliases)
+            if chemical is not None:
+                members[chemical['chemical_id']] = member
+        break
+    return members
+
+
+def eu_water(document, identities, aliases, url, pesticides):
+    annex = document.get_element_by_id('anx_I', None)
+    if annex is None:
+        raise ValueError('EU drinking water source is missing Annex I')
+    heading = next((p for p in annex.xpath('./p') if normalize_name(p.text_content()) == 'chemical parameters'), None)
+    table = next(heading.itersiblings('table'), None) if heading is not None else None
+    if table is None:
+        raise ValueError('EU Annex I chemical parameters table not found')
+    table_rows = table.xpath('./tr | ./thead/tr | ./tbody/tr')
+    if not table_rows or [clean(c.text_content()) for c in water_cells(table_rows[0])] != [
+        'Parameter', 'Parametric value', 'Unit', 'Notes',
+    ]:
+        raise ValueError('EU chemical parameter table columns changed')
+
+    members = eu_pfas_members(document, identities, aliases)
+    records = []
+    for row in table_rows[1:]:
+        values = [clean(cell.text_content()) for cell in water_cells(row)]
+        if len(values) != 4:
+            continue
+        parameter, value, unit, notes = values
+        data = dict(zip(['parameter', 'value', 'unit', 'notes'], values))
+        label = 'EU parametric value ' + unit
+        chemical, method = water_identity(parameter, identities, aliases)
+        if chemical is not None:
+            entry = build_record(chemical, 'European Union', data, parameter, value + ' ' + unit,
+                                 label, 'EU parametric value', 'eu_water', url, note=notes, match_method=method)
+            records.append(entry)
+            date = re.search(r'\bby\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})', notes, re.I)
+            previous = re.search(r'\buntil that date shall be\s+(.+?)(?=\.(?:\s|$)|$)', notes, re.I)
+            start = None
+            if date and previous:
+                try:
+                    start = date_parser.parse(date[1]).date()
+                except ValueError:
+                    start = None
+            if start is not None:
+                entry['effective_from'] = start.isoformat()
+                if not entry['needs_review']:
+                    entry['regulatory_status'] = 'Parametric value from ' + entry['effective_from']
+                records.append(build_record(
+                    chemical, 'European Union', data, parameter, previous[1],
+                    'EU transitional parametric value ' + unit, 'EU parametric value', 'eu_water', url,
+                    effective_until=(start - timedelta(days=1)).isoformat(), note=notes, match_method=method,
+                ))
+            elif re.search(r'\b(?:until that date|shall be met.*?by)\b', notes, re.I):
+                entry.update(needs_review=True, review_reason='Effective date or transitional value needs verification')
+            continue
+        if parameter not in ('PFAS Total', 'Sum of PFAS', 'Pesticides'):
+            continue
+        for _, chemical in identities.iterrows():
+            key = chemical['chemical_id']
+            if parameter == 'Pesticides' and key in pesticides:
+                evidence = {**data, 'Pesticide identity evidence': json.dumps(pesticides[key], ensure_ascii=False)}
+                entry = build_record(chemical, 'European Union', evidence, parameter, value + ' ' + unit,
+                                     label, 'Individual pesticide parametric value', 'eu_water', url,
+                                     relationship='Individual pesticide class rule', note=notes)
+                reason = (entry['review_reason'] if entry['numeric_limit_value'] is None else
+                          'Confirm chemical-specific exceptions and class applicability')
+                entry.update(limit_scope='Individual pesticide limit', limit_group='',
+                             regulatory_status='Pesticide class rule; individual limit',
+                             match_method='Pesticide class applicability', needs_review=True,
+                             review_reason=reason)
+                records.append(entry)
+            elif parameter != 'Pesticides' and key in members:
+                evidence = {**data, 'Annex III Part B member': members[key]}
+                records.append(build_record(
+                    chemical, 'European Union', evidence, parameter, value + ' ' + unit, label,
+                    'EU group-based parametric value', 'eu_water', url,
+                    relationship='Group-based record', note=notes,
+                ))
+    return records
+
+
 def main():
-    cohort = chemical_domain(identity_frame(), DOMAIN)
-    ids = {r['chemical_name']:r for _,r in cohort.iterrows()}
-    if not set(EXPECTED).issubset(ids):
-        raise ValueError('Core drinking water chemical identities missing')
+    identities = identity_frame()
+    if identities.empty:
+        raise ValueError('No drinking water chemicals registered')
+    aliases = identity_aliases(identities)
     records, coverage = [], []
-    for source_id, jurisdiction in [('us_water','United States'),('ca_water','Canada'),('eu_water','European Union')]:
-        section(jurisdiction + ' water source')
+    pesticides = {}
+    sources = [('us_water', 'United States'), ('ca_water', 'Canada'),
+               ('ca_water_pfas', 'Canada'), ('eu_water', 'European Union')]
+    for source_id, jurisdiction in sources:
+        section(jurisdiction + ' water source: ' + source_id)
         url, fallbacks = SOURCES[source_id]
         path = source_file(source_id, url, local_candidates=fallbacks,
-                           optional=(source_id == 'eu_water'))
-
-        # Record coverage when the EU source is unavailable.
+                           optional=source_id in ('ca_water_pfas', 'eu_water'))
+        found = []
+        status = 'No matching parameter in selected source'
         if path is None:
-            print('EU source unavailable. No EU regulation values will be invented.')
-            for chemical in ids.values():
-                coverage.append({
-                    'chemical_id': chemical['chemical_id'],
-                    'chemical_name': chemical['chemical_name'],
-                    'jurisdiction': jurisdiction,
-                    'domain': DOMAIN,
-                    'coverage_status': 'Source unavailable - not evaluated',
-                    'source_id': source_id,
-                    'source_url': url
-                })
-            continue
-
-        # Read EU values without changing decimal commas.
-        if source_id == 'eu_water':
-            tables = pd.read_html(
-                StringIO(path.read_text(encoding='utf-8-sig', errors='replace')),
-                flavor='lxml',
-                displayed_only=False,
-                thousands=None,
-                decimal='.'
-            )
+            status = 'Source unavailable - not evaluated'
         else:
-            tables = html_tables(path)
-
-        if source_id == 'us_water':
-            _, t = find_table(tables, ['contaminant','mcl'])
-            t.columns = [clean(c) for c in t.columns]
-            c_name = column_like(t,'contaminant')
-            direct = ['Arsenic','Mercury','Benzene','Atrazine','PFOA','Lead']
-            for name in direct:
-                target = 'Mercury (inorganic)' if name == 'Mercury' else name
-                row = t[t[c_name].map(normalize_name).str.startswith(normalize_name(target))]
-                if len(row) != 1:
-
-                    # Search other EPA tables for the parameter.
-                    choices = []
-                    for source_table in tables:
-                        cols = [clean(c).lower() for c in source_table.columns]
-                        if not any('contaminant' in c for c in cols):
-                            continue
-                        x = source_table.copy()
-                        x.columns = [clean(c) for c in x.columns]
-                        nc = column_like(x,'contaminant')
-                        subset = x[x[nc].map(normalize_name).str.startswith(normalize_name(target))]
-                        if len(subset):
-                            choices.append((x,subset))
-                    if len(choices) != 1 or len(choices[0][1]) != 1:
-                        raise ValueError(f'EPA table match is ambiguous or missing: {name}')
-                    xt,row = choices[0]
-                else:
-                    xt=t
-                r = row.iloc[0]
-                eligible = [c for c in xt.columns if 'mcl' in c.lower() and 'mclg' not in c.lower()]
-                if not eligible:
-                    raise KeyError(f'EPA lacks MCL/TT column for {name}')
-
-                # Select the first populated limit field.
-                choice = next((c for c in eligible if clean(r[c]) not in ('','nan','—','-')), None)
-                if choice is None:
-                    raise ValueError(f'No EPA limit value for {name}')
-                raw = clean(r[choice]); original = raw
-                regulation_type = 'Maximum Contaminant Level'
-                if name == 'Lead':
-                    regulation_type = 'Lead action level (treatment technique)'
-                    m = re.search(r'Action Level\s*=\s*([0-9.]+)\s*(mg/l|ppm|ppb|µg/l)?',raw,re.I)
-                    if not m:
-                        raise ValueError('Lead action-level format changed. Manual review required')
-                    original = m.group(1) + ' ' + (m.group(2) or clean(choice))
-                record = build_record(ids[name],jurisdiction,r,clean(r[column_like(xt,'contaminant')]),
-                                      original,choice,regulation_type,source_id,url)
-                if name == 'Lead':
-
-                    # Read the revised lead limit and effective date.
-                    page_text = clean(BeautifulSoup(path.read_text(encoding='utf8',errors='replace'), 'html.parser').get_text(' ',strip=True))
-                    revision = re.search(r'(Beginning on[^.]{0,260}?revised lead action level of\s*[0-9.]+\s*mg/L)',page_text,re.I)
-                    if revision:
-                        fragment = revision.group(1)
-                        val = re.search(r'([0-9.]+)\s*mg/L',fragment,re.I)
-                        when = re.search(r'([A-Z][a-z]+\s+\d{1,2},\s+\d{4})',fragment)
-                        if val and when:
-                            start = date_parser.parse(when.group(1)).date()
-                            record['effective_until']=(start-timedelta(days=1)).isoformat()
-                            record['regulatory_status']='Current lead action level through '+record['effective_until']
-                            future=record.copy()
-                            future['original_limit']=val.group(1)+' mg/L (EPA revised lead action level)'
-                            future['numeric_limit_value']=float(val.group(1))
-                            future['original_unit']='mg/L'
-                            future['effective_from']=start.isoformat()
-                            future['effective_until']=''
-                            future['regulatory_status']='Future lead action level'
-                            future['source_record_text']=json.dumps({'original_table_row':json.loads(record['source_record_text']),
-                                'effective_date_and_value_evidence':fragment})
-                            records.append(future)
-                        else:
-                            record['needs_review']=True
-                            record['review_reason']='Future lead action level or compliance date could not be parsed'
-                    else:
-                        record['needs_review']=True
-                        record['review_reason']='EPA lead transition footnote missing from source snapshot'
-                records.append(record)
-
-            # Look for any additional study chemicals.
-            for extra_name in sorted(set(ids)-set(EXPECTED)):
-                found=[]
-                for source_table in tables:
-                    xt=source_table.copy(); xt.columns=[clean(c) for c in xt.columns]
-                    try:nc=column_like(xt,'contaminant')
-                    except KeyError:continue
-                    sub=xt[xt[nc].map(normalize_name)==normalize_name(extra_name)]
-                    if len(sub)==1:found.append((xt,sub.iloc[0]))
-                if len(found)==1:
-                    xt,r=found[0]
-                    eligible=[c for c in xt if 'mcl' in c.lower() and 'mclg' not in c.lower()]
-                    if len(eligible)==1:
-                        records.append(build_record(ids[extra_name],jurisdiction,r,extra_name,clean(r[eligible[0]]),
-                            eligible[0],'EPA parameter (new chemical)',source_id,url))
-                elif len(found)>1:
-                    raise ValueError('Ambiguous source matches for '+extra_name)
-        elif source_id == 'ca_water':
-            _, t = find_table(tables,['parameter','mac'])
-            t.columns = [clean(c) for c in t.columns]
-            param = next((c for c in t if 'parameter' in c.lower()), None)
-            mac = next((c for c in t if 'mac' in c.lower()), None)
-            other = next((c for c in t if 'other value' in c.lower()), None)
-            if not param or not mac:
-                raise ValueError('Canada MAC source table format changed')
-            for name in ['Arsenic','Lead','Mercury','Benzene','Atrazine']:
-                matches = t[t[param].map(normalize_name).str.startswith(normalize_name(name))]
-                if len(matches) != 1:
-                    raise ValueError(f'Canada ambiguous matching {name}: {len(matches)}')
-                r = matches.iloc[0]
-                records.append(build_record(ids[name],jurisdiction,r,clean(r[param]),clean(r[mac]),
-                                            clean(mac),'Maximum Acceptable Concentration',source_id,url,
-                                            unit_override='mg/l'))
-            for extra_name in sorted(set(ids)-set(EXPECTED)):
-                hits=t[t[param].map(normalize_name)==normalize_name(extra_name)]
-                if len(hits)==1:
-                    r=hits.iloc[0]
-                    records.append(build_record(ids[extra_name],jurisdiction,r,clean(r[param]),clean(r[mac]),
-                         clean(mac),'Canada MAC (new chemical)',source_id,url,unit_override='mg/l'))
-                elif len(hits)>1:raise ValueError('Ambiguous Canadian source matches: '+extra_name)
-            if other:
-                pfas = t[t[param].map(normalize_name).str.contains('polyfluoroalkyl substances',regex=False)]
-                if len(pfas) == 1:
-                    r = pfas.iloc[0]
-                    records.append(build_record(ids['PFOA'],jurisdiction,r,clean(r[param]),clean(r[other]),
-                                                clean(other),'PFAS group objective',source_id,url,
-                                                relationship='Group-based record',unit_override='mg/l',
-                                                note='Group value is not a PFOA-specific maximum'))
-        else:
-            _, t = find_table(tables,['arsenic','benzene','bisphenol a','mercury'])
-            t = t.iloc[:, :4].copy()
-            t.columns = ['parameter','value','unit','notes']
-            for name in ['Arsenic','Lead','Bisphenol A','Mercury','Benzene']:
-                r = source_row(t,'parameter',name)
-                original = build_record(ids[name],jurisdiction,r,clean(r['parameter']),clean(r['value'])+' '+clean(r['unit']),
-                                        'EU parametric value '+clean(r['unit']),'EU parametric value',source_id,url,
-                                        note=clean(r['notes']))
-                if name == 'Lead':
-                    notes=clean(r['notes'])
-                    date_match=re.search(r'by\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})',notes,re.I)
-                    previous=re.search(r'until that date shall be\s*([0-9.,]+)\s*(?:µg/l|μg/l|ug/l)',notes,re.I)
-                    if date_match and previous:
-                        start=date_parser.parse(date_match.group(1)).date()
-                        original['effective_from']=start.isoformat()
-                        original['regulatory_status']='Future EU lead parametric value'
-                        current=original.copy()
-                        n,unit,error=amount(previous.group(1)+' '+clean(r['unit']),'EU lead transitional value')
-                        current['original_limit']=previous.group(1)+' '+clean(r['unit'])
-                        current['numeric_limit_value']=n
-                        current['effective_from']=''
-                        current['effective_until']=(start-timedelta(days=1)).isoformat()
-                        current['regulatory_status']='Current EU lead transitional parametric value'
-                        current['needs_review']=bool(error)
-                        current['review_reason']=error
-                        records.append(current)
-                    else:
-                        original['needs_review']=True
-                        original['review_reason']='EU lead transitional value or compliance date not extracted from source notes'
-                        original['regulatory_status']='Future EU lead value; effective date unverified'
-                records.append(original)
-            for extra_name in sorted(set(ids)-set(EXPECTED)):
-                hits=t[t.parameter.map(normalize_name)==normalize_name(extra_name)]
-                if len(hits)==1:
-                    r=hits.iloc[0]
-                    records.append(build_record(ids[extra_name],jurisdiction,r,clean(r['parameter']),
-                          clean(r['value'])+' '+clean(r['unit']),'EU parametric value '+clean(r['unit']),
-                          'EU parametric value (new chemical)',source_id,url,note=clean(r['notes'])))
-                elif len(hits)>1:raise ValueError('Ambiguous EU source matches: '+extra_name)
-            for name,param in [('Atrazine','Pesticides'),('PFOA','PFAS Total'),('PFOA','Sum of PFAS')]:
-                r = source_row(t,'parameter',param)
-                entry = build_record(ids[name],jurisdiction,r,clean(r['parameter']),clean(r['value'])+' '+clean(r['unit']),
-                                     'EU parametric value '+clean(r['unit']),'EU group-based parametric value',source_id,url,
-                                     relationship='Group-based record',note=clean(r['notes']))
-
-                # Separate pesticide limits from PFAS group limits.
-                if name == 'Atrazine':
-                    entry['relationship_to_chemical'] = 'Individual pesticide class rule'
-                    entry['regulation_type'] = 'Individual pesticide parametric value'
-                    entry['regulatory_status'] = 'Pesticide class rule; individual limit'
-                    entry['limit_scope'] = 'Individual pesticide limit'
-                    entry['limit_group'] = ''
-                    entry['match_method'] = 'Pesticide class applicability'
-                    entry['review_reason'] = 'Confirm chemical-specific exceptions and class applicability'
-                records.append(entry)
-        represented = {r['chemical_name'] for r in records if r['jurisdiction']==jurisdiction}
-        for name in ids:
-            coverage.append({'chemical_id':ids[name]['chemical_id'],'chemical_name':name,'jurisdiction':jurisdiction,
-                             'domain':DOMAIN,'coverage_status':'Extracted source record' if name in represented else 'Not listed in selected source',
-                             'source_id':source_id,'source_url':url})
-    out = pd.DataFrame(records)
-    if out.empty or out.duplicated().any() or (out.numeric_limit_value.dropna()<0).any():
+            document = html.parse(str(path), html.HTMLParser(encoding='utf-8')).getroot()
+            if source_id == 'us_water':
+                found = epa_water(document, identities, aliases, url)
+            elif source_id == 'ca_water':
+                found, pesticides = canada_water(document, identities, aliases, url)
+            elif source_id == 'ca_water_pfas':
+                found = canada_water_objective(document, identities, url)
+            else:
+                found = eu_water(document, identities, aliases, url, pesticides)
+        records.extend(found)
+        matched = {entry['chemical_id'] for entry in found}
+        for _, chemical in identities.iterrows():
+            coverage.append({
+                'chemical_id': chemical['chemical_id'], 'chemical_name': chemical['chemical_name'],
+                'jurisdiction': jurisdiction, 'domain': DOMAIN, 'source_id': source_id,
+                'source_url': url,
+                'coverage_status': 'Extracted source record' if chemical['chemical_id'] in matched else status,
+            })
+    bulk = saved_ecfr_bulk()
+    if bulk is not None:
+        section('United States bottled-water source: 21 CFR 165.110')
+        found = fda_bottled_water(bulk, identities, aliases)
+        records.extend(found)
+        for entry in found:
+            coverage.append({key: entry[key] for key in (
+                'chemical_id', 'chemical_name', 'jurisdiction', 'domain', 'source_id', 'source_url',
+            )} | {'coverage_status': 'Extracted source record'})
+    out, covered = pd.DataFrame(records), pd.DataFrame(coverage)
+    if out.empty or out.duplicated().any() or out.numeric_limit_value.dropna().lt(0).any():
         raise ValueError('Water record validation failed')
+    print('Records flagged for review:', int(out.needs_review.sum()), 'of', len(out))
+    print('Coverage:', covered.groupby(['jurisdiction', 'coverage_status']).size())
+    report_checks(out, covered)
+    save_csv(out, 'chemscope_drinking_water_regulations.csv')
+    save_csv(covered, 'chemscope_drinking_water_coverage.csv')
 
-    # Print the extracted EU water values.
-    eu_check = out[out['jurisdiction'] == 'European Union']
-    if not eu_check.empty:
-        print('EU water limits (mg/L):')
-        print(eu_check[['chemical_name', 'source_parameter', 'original_limit',
-                        'numeric_limit_value']].to_string(index=False))
-    print('Review needed:',int(out.needs_review.sum()),'of',len(out))
-    print('Coverage:',pd.DataFrame(coverage).groupby(['jurisdiction','coverage_status']).size())
-    report_checks(out, pd.DataFrame(coverage))
-    save_csv(out,'chemscope_drinking_water_regulations.csv')
-    save_csv(pd.DataFrame(coverage),'chemscope_drinking_water_coverage.csv')
 
-# Print cleaning checks without changing the saved records.
 def report_checks(data, coverage):
-    print('\nTEST FOR PROGRESS REPORT 2')
+    section('Drinking water checks')
     print('Water records:', len(data))
 
     required = ['chemical_id', 'chemical_name', 'jurisdiction',

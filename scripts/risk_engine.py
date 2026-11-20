@@ -2,11 +2,9 @@
 from __future__ import annotations
 import math
 
-# ------------------------------------
-# EXPOSURE CALCULATIONS
+# Exposure calculations
 
 
-# Check that an input is a valid number.
 def finite_number(value, name):
     if isinstance(value, bool):
         raise ValueError(f'{name} must be a finite number')
@@ -19,7 +17,6 @@ def finite_number(value, name):
     return result
 
 
-# Calculate the daily dose from concentration and product use.
 def calculate_daily_dose(domain, *, concentration, body_weight_kg,
                          consumption_per_day=None, product_g_per_day=None,
                          absorption_fraction=None):
@@ -54,11 +51,9 @@ def calculate_daily_dose(domain, *, concentration, body_weight_kg,
     return dose
 
 
-# ------------------------------------
-# NONCANCER SCREENING SCORE
+# Noncancer screening score
 
 
-# Compare the daily oral dose with a matching reference value.
 def score_non_cancer(*, daily_dose_mg_kg_day, reference_dose_mg_kg_day,
                      exposure_route, benchmark_route, exposure_duration, benchmark_duration,
                      benchmark_reviewed=False, scenario_reviewed=False):
@@ -103,8 +98,7 @@ def score_non_cancer(*, daily_dose_mg_kg_day, reference_dose_mg_kg_day,
             'publishable': False, 'score_method': method}
 
 
-# ------------------------------------
-# RISK DATA REQUIREMENTS
+# Risk data requirements
 
 RISK_INPUT_FIELDS = {
     'hazard': ['chemical_id', 'benchmark_type', 'benchmark_value', 'benchmark_unit',

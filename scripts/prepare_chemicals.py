@@ -5,8 +5,7 @@ import zipfile
 import pandas as pd
 from pipeline_common import RAW, PROCESSED, clean, normalize_name, save_csv, section, update_manifest
 
-# ------------------------------------
-# INITIAL STUDY COHORT
+# Initial study cohort
 
 # List the chemicals included in this project.
 COHORT = [
@@ -35,10 +34,8 @@ ALIASES = {
     'Bisphenol A': ['4,4-isopropylidenediphenol', 'bisphenol a'],
 }
 
-# ------------------------------------
-# SOURCE IDENTITY MATCHING
+# Source identity matching
 
-# Find matching chemical names in the EPA file.
 def chemexpo_candidates():
     zips = sorted(RAW.glob('ChemExpo_bulk_composition_chemicals_*.zip'), key=lambda p:p.stat().st_mtime, reverse=True)
     if not zips:
@@ -61,17 +58,18 @@ def chemexpo_candidates():
     return pd.concat(chunks, ignore_index=True).drop_duplicates()
 
 
-# Match source records and keep the existing chemical IDs.
 def resolve(cohort, source, existing):
     records = []
     saved_by_id = existing.set_index('chemical_id') if not existing.empty else None
     for chemical_id, name, category in cohort:
+        saved = {}
         if saved_by_id is not None and chemical_id in saved_by_id.index:
-            saved = saved_by_id.loc[chemical_id]
-            if isinstance(saved, pd.DataFrame):
+            prior = saved_by_id.loc[chemical_id]
+            if isinstance(prior, pd.DataFrame):
                 raise ValueError(f'Duplicate preserved ID: {chemical_id}')
-            if clean(saved['chemical_name']) != name:
+            if clean(prior['chemical_name']) != name:
                 raise ValueError(f'Existing identity {chemical_id} changed name: {name}; do not reassign IDs')
+            saved = prior.to_dict()
         alias_set = {normalize_name(s) for s in [name] + ALIASES.get(name, [])}
         matches = source[source['Curated Chemical Name'].map(normalize_name).isin(alias_set)]
         identities = matches[['Curated CAS','DTXSID']].fillna('').drop_duplicates()
@@ -79,17 +77,17 @@ def resolve(cohort, source, existing):
             raise ValueError(f'Identity ambiguous or missing for {name}: {identities.to_dict("records")}')
         match = identities.iloc[0]
         cas, dtx = clean(match['Curated CAS']), clean(match['DTXSID'])
-        if saved_by_id is not None and chemical_id in saved_by_id.index:
-            old_cas = clean(saved_by_id.loc[chemical_id].get('cas_number'))
-            if old_cas and old_cas != cas:
-                raise ValueError(f'CAS changed for {chemical_id} ({old_cas} => {cas}); review manually')
-        records.append({'chemical_id': chemical_id, 'chemical_name': name, 'cas_number': cas,
+        old_cas = clean(saved.get('cas_number'))
+        if old_cas and old_cas != cas:
+            raise ValueError(f'CAS changed for {chemical_id} ({old_cas} => {cas}); review manually')
+        other_names = [part.strip() for part in clean(saved.get('aliases')).split('|')] + ALIASES.get(name, [])
+        records.append({**saved, 'chemical_id': chemical_id, 'chemical_name': name, 'cas_number': cas,
+                        'aliases': ' | '.join(filter(None, dict.fromkeys(other_names))),
                         'dtxsid': dtx, 'primary_category': category, 'identity_source': 'EPA ChemExpo',
                         'identity_match_method': 'Exact curated name or documented synonym'})
     return pd.DataFrame(records)
 
 
-# Save the chemical list and its source information.
 def main():
     section('CHEMICAL IDENTITY ENRICHMENT')
     target = PROCESSED / 'chemscope_chemicals_identified.csv'
@@ -107,9 +105,8 @@ def main():
     print('Existing IDs retained; new chemicals must be assigned permanent unused IDs.')
     report_checks(data)
 
-# Check the chemical records for missing and repeated values.
 def report_checks(data):
-    print('\nTEST FOR PROGRESS REPORT 2')
+    print('\nDATA QUALITY CHECKS')
     text = data.astype('string')
     missing = text.isna() | text.apply(lambda column: column.str.strip().eq(''))
     print('Missing values by column:', missing.sum().to_dict())

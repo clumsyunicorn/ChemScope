@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
+from math import isfinite
 from pathlib import Path
 import json
+import os
 import re
 import shutil
 
@@ -14,43 +16,38 @@ import pandas as pd
 import requests
 
 
-# ------------------------------------
-# PROJECT PATHS
+# Project paths
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / 'data' / 'raw'
 PROCESSED = ROOT / 'data' / 'processed'
 SOURCES = RAW / 'sources'
 MANIFEST = SOURCES / 'manifest.json'
+SAVED_SOURCES_ONLY = 'CHEMSCOPE_SAVED_SOURCES_ONLY'
 AGENT = {'User-Agent': 'ChemScope educational data science project/1.0', 'Accept-Language': 'en-US,en;q=0.9'}
 
 
-# ------------------------------------
-# TEXT AND FILE FUNCTIONS
+# Text and file functions
 
-# Print a heading for each processing step.
 def section(name):
     print('\n' + name.upper())
 
 
-# Remove extra spaces and handle missing text.
 def clean(value):
     if value is None or pd.isna(value):
         return ''
     return ' '.join(str(value).replace('\xa0', ' ').replace('\u2009', ' ').split()).strip()
 
 
-# Standardize chemical names for matching.
 def normalize_name(value):
     return re.sub(r'[^a-z0-9]+', ' ', clean(value).casefold()).strip()
 
 
-# Find CAS numbers in a text field.
 def cas_tokens(value):
-    return set(re.findall(r'(?<!\d)\d{2,7}-\d{2}-\d(?!\d)', clean(value)))
+    parts = re.findall(r'(?<!\d)(\d{2,7})\s*[-‐‑–−]\s*(\d{2})\s*[-‐‑–−]\s*(\d)(?!\d)', clean(value))
+    return {'-'.join(number) for number in parts}
 
 
-# Calculate a file checksum.
 def sha_file(path):
     with open(path, 'rb') as handle:
         digest = sha256()
@@ -59,16 +56,20 @@ def sha_file(path):
     return digest.hexdigest()
 
 
-# Load the saved source information.
 def read_manifest():
     if not MANIFEST.exists():
         return {}
     return json.loads(MANIFEST.read_text(encoding='utf-8'))
 
 
-# Record the source file, date, and checksum.
-def update_manifest(source_id, path, url, retrieval_method):
+def save_manifest(manifest):
     SOURCES.mkdir(parents=True, exist_ok=True)
+    temp = MANIFEST.with_suffix('.partial')
+    temp.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding='utf-8')
+    temp.replace(MANIFEST)
+
+
+def update_manifest(source_id, path, url, retrieval_method):
     manifest = read_manifest()
     prior = manifest.get(source_id, {})
     current_hash = sha_file(path)
@@ -77,29 +78,38 @@ def update_manifest(source_id, path, url, retrieval_method):
              'captured_at_utc': datetime.now(timezone.utc).isoformat() if prior.get('sha256') != current_hash
              else prior.get('captured_at_utc', datetime.now(timezone.utc).isoformat())}
     manifest[source_id] = entry
-    MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding='utf-8')
+    save_manifest(manifest)
     return entry
 
 
-# Load a saved source or download it if needed.
+def saved_source_paths(source_id, local_candidates=()):
+    return [SOURCES / f'{source_id}.html', *(RAW / name for name in local_candidates)]
+
+
 def source_file(source_id, url, *, local_candidates=(), refresh=False, optional=False):
-    SOURCES.mkdir(parents=True, exist_ok=True)
-    stored = SOURCES / (source_id + '.html')
-    if stored.exists() and not refresh:
-        known = read_manifest().get(source_id, {})
-        if known.get('sha256') and sha_file(stored) != known['sha256']:
-            raise ValueError(f'Source {source_id} checksum changed. Reinspect file and --refresh.')
-        if not known:
-            update_manifest(source_id, stored, url, 'existing_official_snapshot')
-        return stored
-    for candidate in local_candidates:
-        p = RAW / candidate
-        if p.is_file() and not refresh:
+    paths = saved_source_paths(source_id, local_candidates)
+    stored = paths[0]
+    if not refresh:
+        saved = next((path for path in paths if path.is_file()), None)
+        if saved is not None:
             known = read_manifest().get(source_id, {})
-            if known.get('sha256') and sha_file(p) != known['sha256']:
-                raise ValueError(f'Local official source {source_id} changed from recorded checksum. Review and recapture.')
-            update_manifest(source_id, p, url, 'official_page_saved_locally')
-            return p
+            if known.get('sha256') and sha_file(saved) != known['sha256']:
+                raise ValueError(f'Source {source_id} differs from its recorded checksum. Review the saved file.')
+            if saved != stored:
+                update_manifest(source_id, saved, url, 'official_page_saved_locally')
+            elif not known:
+                update_manifest(source_id, saved, url, 'existing_official_snapshot')
+            return saved
+
+        if os.environ.get(SAVED_SOURCES_ONLY) == '1':
+            locations = ' or '.join(path.relative_to(ROOT).as_posix() for path in paths)
+            message = f'Missing saved source {source_id}. Expected {locations}.'
+            if optional:
+                print(message)
+                return None
+            raise FileNotFoundError(message)
+
+    SOURCES.mkdir(parents=True, exist_ok=True)
     try:
         response = requests.get(url, headers=AGENT, timeout=60)
         response.raise_for_status()
@@ -118,8 +128,7 @@ def source_file(source_id, url, *, local_candidates=(), refresh=False, optional=
         if stored.exists():
             print(f'WARNING {source_id}: refresh failed; using prior verified snapshot: {exc}')
             return stored
-        for candidate in local_candidates:
-            p = RAW / candidate
+        for p in paths[1:]:
             if p.is_file():
                 update_manifest(source_id, p, url, 'official_page_saved_locally')
                 return p
@@ -129,15 +138,16 @@ def source_file(source_id, url, *, local_candidates=(), refresh=False, optional=
         raise RuntimeError(f'Missing official source {source_id}. Save full source HTML to data/raw/{local_candidates[0] if local_candidates else source_id+".html"}. Details: {exc}') from exc
 
 
-# Read the tables from a saved HTML page.
-def html_tables(path):
+def html_tables(path, *, thousands=','):
     try:
-        return pd.read_html(StringIO(path.read_text(encoding='utf-8-sig', errors='replace')), flavor='lxml', displayed_only=False)
+        return pd.read_html(
+            StringIO(path.read_text(encoding='utf-8-sig', errors='replace')),
+            flavor='lxml', displayed_only=False, thousands=thousands,
+        )
     except (ValueError, ImportError) as exc:
         raise ValueError(f'Could not parse HTML tables in {path}: {exc}') from exc
 
 
-# Convert table headings to simple column names.
 def flat_columns(frame):
     result = frame.copy()
     if isinstance(result.columns, pd.MultiIndex):
@@ -147,7 +157,6 @@ def flat_columns(frame):
     return result
 
 
-# Find the most recently saved file matching a name pattern.
 def latest_file(pattern):
     matches = sorted(RAW.glob(pattern), key=lambda p: (p.stat().st_mtime, p.name), reverse=True)
     if not matches:
@@ -157,7 +166,6 @@ def latest_file(pattern):
     return matches[0]
 
 
-# Load the chemical list and check the required columns.
 def identity_frame():
     path = PROCESSED / 'chemscope_chemicals_identified.csv'
     if not path.exists():
@@ -169,12 +177,10 @@ def identity_frame():
     return df
 
 
-# Select chemicals assigned to a particular category.
 def chemical_domain(frame, label):
     return frame[frame.primary_category.fillna('').str.contains(label, regex=False, case=False)].copy()
 
 
-# Get source details to include with a data record.
 def source_ref(source_id, fallback_url):
     item = read_manifest().get(source_id, {})
     return {'source_id': source_id,
@@ -183,30 +189,73 @@ def source_ref(source_id, fallback_url):
             'source_retrieved_at': item.get('captured_at_utc', '')}
 
 
-# Read a limit as a number when the value is clear.
-def parse_limit(text):
-    s = clean(text)
-    if not s:
+def parse_limit(text, *, decimal_comma=None):
+    value = clean(text)
+    if not value:
         return 'Not provided', None, ''
-    low = s.lower()
-    if 'quantum satis' in low:
+
+    # Some tables prefix each limit with the letter of its product category.
+    value = re.sub(r'^(?:\([a-z](?:\.\d+)?\)|[a-z]\))\s*', '', value, flags=re.I)
+    label = value.removesuffix('.').casefold()
+    if label == 'quantum satis':
         return 'Quantum satis', None, ''
-    if 'good manufacturing practice' in low or low == 'gmp':
+    if label in ('good manufacturing practice', 'gmp'):
         return 'Good Manufacturing Practice', None, ''
-    if any(key in low for key in ['must not exceed', 'in combination', 'combined', 'not exceed', 'except', ' or ', 'only when']):
-        return 'Complex condition', None, ''
-    matches = re.findall(r'(?<!\d)(\d+(?:[\s,]\d{3})*(?:[.,]\d+)?)\s*(%|ppm|mg/kg|mg/l|µg/l|μg/l|ug/l|ppb)(?=$|\s|[,;.)])', s, re.I)
-    if len(matches) != 1:
-        return 'Complex condition', None, ''
-    number, unit = matches[0]
-    number = number.replace(' ', '').replace(',', '.') if ',' in number and '.' not in number else number.replace(',', '').replace(' ', '')
-    try:
-        return 'Numeric', float(number), unit
-    except ValueError:
+
+    # Read the whole value so a range cannot turn into a single endpoint.
+    match = re.fullmatch(
+        r'(?:no more than |less than |up to )?(.+?)\s*'
+        r'(%|ppm|ppb|mg/kg|mg/l|[µμu]g/l)'
+        r'(?:\s*\(\s*(?:\d+|acid|after mixing for use)\s*\))?\.?',
+        value, re.I,
+    )
+    if match is None:
         return 'Complex condition', None, ''
 
+    number, unit = match.groups()
+    amount = parse_number(number, decimal_comma=decimal_comma)
+    if amount is None:
+        return 'Complex condition', None, ''
+    return 'Numeric', amount, unit
 
-# Match a chemical by CAS number, name, or listed synonym.
+
+def parse_number(text, *, decimal_comma=None):
+    number = clean(text)
+    # The table reader may represent a small value as scientific notation.
+    if re.fullmatch(r'(?:\d+(?:\.\d+)?|\.\d+)[eE][+-]?\d+', number):
+        amount = float(number)
+        return amount if isfinite(amount) else None
+
+    comma_group = re.fullmatch(r'[1-9]\d{0,2}(?:,\d{3})+(?:\.\d+)?', number)
+    plain_number = re.fullmatch(
+        r'(?:\d+|[1-9]\d{0,2}(?: \d{3})+)(?:[.,]\d+)?|[.,]\d+', number
+    )
+
+    # A number like 1,000 needs the source's convention to resolve the comma.
+    if comma_group and plain_number and decimal_comma is None:
+        return None
+    if comma_group and decimal_comma is not True:
+        number = number.replace(',', '')
+    elif plain_number and (decimal_comma is not False or ',' not in number):
+        number = number.replace(' ', '').replace(',', '.')
+    else:
+        return None
+
+    amount = float(number)
+    return amount if isfinite(amount) else None
+
+
+def identity_aliases(identities):
+    aliases = {}
+    columns = [name for name in ('aliases', 'synonyms', 'other_names') if name in identities]
+    for _, chemical in identities.iterrows():
+        names = [clean(name) for column in columns
+                 for name in re.split(r'[|;]', clean(chemical[column])) if clean(name)]
+        if names:
+            aliases[chemical['chemical_name']] = names
+    return aliases
+
+
 def match_identity(row_name, row_cas, identities, aliases=None):
     tokens = cas_tokens(row_cas)
     if tokens:
@@ -217,9 +266,13 @@ def match_identity(row_name, row_cas, identities, aliases=None):
         if len(matched) > 1:
             return None, 'Ambiguous CAS', True
     target = normalize_name(row_name)
+    if not target:
+        return None, 'Unmatched or ambiguous', True
     matched = identities[identities.chemical_name.map(normalize_name) == target]
     if len(matched) == 1:
         return matched.iloc[0], 'Exact normalized name', False
+    if len(matched) > 1:
+        return None, 'Ambiguous name', True
     aliases = aliases or {}
     named = [name for name, forms in aliases.items() if target in {normalize_name(f) for f in forms}]
     if len(named) == 1:
@@ -229,7 +282,17 @@ def match_identity(row_name, row_cas, identities, aliases=None):
     return None, 'Unmatched or ambiguous', True
 
 
-# Save a processed DataFrame as a CSV file.
+def match_source_identity(name, source_text, identities, aliases):
+    chemical, method, _ = match_identity(name, source_text, identities, aliases)
+    numbers = cas_tokens(source_text)
+    if chemical is not None and numbers:
+        named, _, _ = match_identity(name, '', identities, aliases)
+        if numbers != {chemical['cas_number']} or (
+                named is not None and named['chemical_id'] != chemical['chemical_id']):
+            return None, 'Unmatched or ambiguous'
+    return chemical, method
+
+
 def save_csv(df, filename):
     PROCESSED.mkdir(parents=True, exist_ok=True)
     path = PROCESSED / filename
@@ -238,7 +301,6 @@ def save_csv(df, filename):
     return path
 
 
-# Copy existing scripts and processed files into a dated folder.
 def backup_existing():
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     folder = ROOT / 'backups' / stamp
@@ -246,7 +308,8 @@ def backup_existing():
     for base in (ROOT / 'scripts', PROCESSED):
         if base.is_dir():
             for p in base.iterdir():
-                if p.is_file() and p.suffix.lower() in {'.py', '.csv', '.json'}:
+                is_database = base == PROCESSED and p.name == 'chemscope.db'
+                if p.is_file() and (is_database or p.suffix.lower() in {'.py', '.csv', '.json'}):
                     dest = folder / base.name
                     dest.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(p, dest / p.name)

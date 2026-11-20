@@ -8,11 +8,9 @@ import zipfile
 import pandas as pd
 from pipeline_common import RAW, normalize_name, save_csv, identity_frame, update_manifest, section
 
-# ------------------------------------
-# CHEMICAL REGISTRATION
+# Chemical registration
 
 
-# Find an exact chemical match in the EPA data.
 def search_bulk(query):
     zips = sorted(RAW.glob('ChemExpo_bulk_composition_chemicals_*.zip'),
                   key=lambda p: p.stat().st_mtime, reverse=True)
@@ -43,7 +41,6 @@ def search_bulk(query):
         return pd.concat(matches, ignore_index=True).drop_duplicates(subset=['Curated CAS', 'DTXSID'])
 
 
-# Assign the next chemical ID and save the updated lists.
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--query', required=True, help='Exact curated name, CAS number, or DTXSID')

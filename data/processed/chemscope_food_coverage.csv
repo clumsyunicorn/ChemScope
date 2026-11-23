@@ -1,16 +1,46 @@
 chemical_id,chemical_name,jurisdiction,domain,coverage_status
-CHEM003,Bisphenol A,United States,Food,Source evidence found; legal interpretation pending
-CHEM004,Titanium dioxide,United States,Food,FDA chemical found; legal rule unavailable
-CHEM012,Tartrazine,United States,Food,FDA chemical found; legal rule unavailable
-CHEM013,Aspartame,United States,Food,FDA chemical found; legal rule unavailable
-CHEM014,Sorbic acid,United States,Food,FDA chemical found; legal rule unavailable
+CHEM001,Arsenic,United States,Food,No matched evidence in selected sources; no legal conclusion
+CHEM002,Lead,United States,Food,No matched evidence in selected sources; no legal conclusion
+CHEM003,Bisphenol A,United States,Food,Source evidence found; applicability conditional
+CHEM004,Titanium dioxide,United States,Food,Source evidence found; applicability conditional
+CHEM005,Formaldehyde,United States,Food,Source evidence found; applicability conditional
+CHEM006,Triclosan,United States,Food,No matched evidence in selected sources; no legal conclusion
+CHEM007,Salicylic acid,United States,Food,Source evidence found; applicability conditional
+CHEM008,Hydroquinone,United States,Food,Source evidence found; applicability conditional
+CHEM009,Mercury,United States,Food,No matched evidence in selected sources; no legal conclusion
+CHEM010,Benzene,United States,Food,Source evidence found; applicability conditional
+CHEM011,Atrazine,United States,Food,No matched evidence in selected sources; no legal conclusion
+CHEM012,Tartrazine,United States,Food,Source evidence found; legal interpretation pending
+CHEM013,Aspartame,United States,Food,Source evidence found; legal interpretation pending
+CHEM014,Sorbic acid,United States,Food,Source evidence found; applicability conditional
+CHEM015,PFOA,United States,Food,No matched evidence in selected sources; no legal conclusion
+CHEM001,Arsenic,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM002,Lead,Canada,Food,No matched evidence in selected sources; no legal conclusion
 CHEM003,Bisphenol A,Canada,Food,Source evidence found; legal interpretation pending
 CHEM004,Titanium dioxide,Canada,Food,Source evidence found; applicability conditional
+CHEM005,Formaldehyde,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM006,Triclosan,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM007,Salicylic acid,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM008,Hydroquinone,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM009,Mercury,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM010,Benzene,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM011,Atrazine,Canada,Food,No matched evidence in selected sources; no legal conclusion
 CHEM012,Tartrazine,Canada,Food,Source evidence found; applicability conditional
 CHEM013,Aspartame,Canada,Food,Source evidence found; applicability conditional
 CHEM014,Sorbic acid,Canada,Food,Source evidence found; applicability conditional
-CHEM003,Bisphenol A,European Union,Food,Relevant food-contact or additive legal source unavailable
-CHEM004,Titanium dioxide,European Union,Food,Relevant food-contact or additive legal source unavailable
+CHEM015,PFOA,Canada,Food,No matched evidence in selected sources; no legal conclusion
+CHEM001,Arsenic,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM002,Lead,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM003,Bisphenol A,European Union,Food,Source evidence found; legal interpretation pending
+CHEM004,Titanium dioxide,European Union,Food,Source evidence found; legal interpretation pending
+CHEM005,Formaldehyde,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM006,Triclosan,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM007,Salicylic acid,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM008,Hydroquinone,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM009,Mercury,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM010,Benzene,European Union,Food,No matched evidence in selected sources; no legal conclusion
+CHEM011,Atrazine,European Union,Food,No matched evidence in selected sources; no legal conclusion
 CHEM012,Tartrazine,European Union,Food,Source evidence found; applicability conditional
 CHEM013,Aspartame,European Union,Food,Source evidence found; applicability conditional
-CHEM014,Sorbic acid,European Union,Food,Source evidence found; applicability conditional
+CHEM014,Sorbic acid,European Union,Food,Source evidence found; legal interpretation pending
+CHEM015,PFOA,European Union,Food,No matched evidence in selected sources; no legal conclusion

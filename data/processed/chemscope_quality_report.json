@@ -1,18 +1,43 @@
 {
-  "generated_at_utc": "2026-10-25T01:25:52.757779+00:00",
+  "generated_at_utc": "2026-11-15T23:33:31.627153+00:00",
   "required_inputs_missing": [],
   "optional_inputs_missing": [],
+  "source_staging": {
+    "eu_food": {
+      "rows": 4817,
+      "row_types": {
+        "additive_rule": 2645,
+        "other_source_row": 1282,
+        "footnote_definition": 715,
+        "food_category": 155,
+        "category_note": 20
+      }
+    }
+  },
   "counts": {
     "chemicals": 15,
-    "sources": 14,
-    "regulations": 268,
-    "coverage": 54,
-    "chemical_uses": 262,
+    "sources": 61,
+    "source_records": 4817,
+    "regulations": 363,
+    "coverage": 177,
+    "chemical_uses": 359,
     "hazard_benchmarks": 17,
-    "exposure_scenarios": 1,
-    "risk_assessments": 1
+    "exposure_scenarios": 2,
+    "exposure_measurements": 1,
+    "risk_assessments": 2
   },
-  "regulation_records_requiring_review": 71,
+  "regulation_records_requiring_review": 234,
+  "chemical_jurisdiction_coverage": {
+    "with_source_results": 44,
+    "expected": 45,
+    "missing": [
+      {
+        "chemical_name": "PFOA",
+        "cas_number": "335-67-1",
+        "jurisdiction": "Canada"
+      }
+    ]
+  },
   "risk_readiness": "No risk scores until measured/scenario concentrations, route-compatible toxicology values, and scenario review are present",
   "publishable_consumer_risk_scores": 0,
   "regulatory_records_are_not_exposure_measurements": true

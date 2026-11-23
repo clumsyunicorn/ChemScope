@@ -410,7 +410,7 @@ def collect_eu_legal(source_id, *, refresh=False):
         return path
 
     # The HTML returned by either publisher must pass the SAME legal-text
-    # validation before it can replace a previous snapshot or enter the manifest.
+    # validation before it can reppython -m unittest discover -s tests -p test_project_overview.py -vlace a previous snapshot or enter the manifest.
     celex = EU_ACTS[source_id]
     alternatives = [f'https://eur-lex.europa.eu/legal-content/EN/{form}/?uri=CELEX:{celex}'
                     for form in ('TXT/HTML', 'TXT')]

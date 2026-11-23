@@ -1,19 +1,68 @@
 chemical_id,chemical_name,jurisdiction,domain,coverage_status,source_id,source_url
-CHEM004,Titanium dioxide,Canada,Cosmetics,No match in selected source,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM001,Arsenic,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM002,Lead,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM003,Bisphenol A,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM004,Titanium dioxide,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM005,Formaldehyde,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM006,Triclosan,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM007,Salicylic acid,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM008,Hydroquinone,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM009,Mercury,United States,Cosmetics,Matching source entry,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM010,Benzene,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM011,Atrazine,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM012,Tartrazine,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM013,Aspartame,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM014,Sorbic acid,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM015,PFOA,United States,Cosmetics,No matching provision extracted from 21 CFR Part 700 Subpart B,us_ecfr_title21_bulk,https://www.ecfr.gov/current/title-21/part-700/subpart-B
+CHEM007,Salicylic acid,United States,Cosmetics,Matching source entry for the specified product use,us_ecfr_21_310_545,https://www.ecfr.gov/current/title-21/section-310.545
+CHEM006,Triclosan,United States,Cosmetics,Matching source entry for the specified product use,us_ecfr_21_310_545,https://www.ecfr.gov/current/title-21/section-310.545
+CHEM007,Salicylic acid,United States,Cosmetics,Matching source entry for the specified product use,us_ecfr_21_333_310,https://www.ecfr.gov/current/title-21/section-333.310
+CHEM004,Titanium dioxide,United States,Cosmetics,Matching source entry for the specified product use,us_ecfr_21_73_2575,https://www.ecfr.gov/current/title-21/section-73.2575
+CHEM012,Tartrazine,United States,Cosmetics,Matching source entry for the specified product use,us_ecfr_21_74_2705,https://www.ecfr.gov/current/title-21/section-74.2705
+CHEM001,Arsenic,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM002,Lead,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM003,Bisphenol A,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM004,Titanium dioxide,Canada,Cosmetics,No match in verified Hotlist tables,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
 CHEM005,Formaldehyde,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
 CHEM006,Triclosan,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
 CHEM007,Salicylic acid,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
 CHEM008,Hydroquinone,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
 CHEM009,Mercury,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM010,Benzene,Canada,Cosmetics,Matching source entry,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM011,Atrazine,Canada,Cosmetics,No match in verified Hotlist tables,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM012,Tartrazine,Canada,Cosmetics,No match in verified Hotlist tables,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM013,Aspartame,Canada,Cosmetics,No match in verified Hotlist tables,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM014,Sorbic acid,Canada,Cosmetics,No match in verified Hotlist tables,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM015,PFOA,Canada,Cosmetics,No match in verified Hotlist tables,ca_cosmetic_hotlist,https://www.canada.ca/en/health-canada/services/consumer-product-safety/cosmetics/cosmetic-ingredient-hotlist-prohibited-restricted-ingredients/hotlist.html
+CHEM001,Arsenic,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM002,Lead,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM003,Bisphenol A,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
 CHEM004,Titanium dioxide,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
 CHEM005,Formaldehyde,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
 CHEM006,Triclosan,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
 CHEM007,Salicylic acid,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
 CHEM008,Hydroquinone,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
 CHEM009,Mercury,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM010,Benzene,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM011,Atrazine,European Union,Cosmetics,No match in selected source,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM012,Tartrazine,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM013,Aspartame,European Union,Cosmetics,No match in selected source,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM014,Sorbic acid,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM015,PFOA,European Union,Cosmetics,Matching source entry,eu_cosmetics,https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02009R1223-20260518
+CHEM001,Arsenic,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM002,Lead,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM003,Bisphenol A,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
 CHEM004,Titanium dioxide,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
 CHEM005,Formaldehyde,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
 CHEM006,Triclosan,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
 CHEM007,Salicylic acid,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
 CHEM008,Hydroquinone,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
 CHEM009,Mercury,United States,Cosmetics,Matching source entry,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM010,Benzene,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM011,Atrazine,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM012,Tartrazine,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM013,Aspartame,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM014,Sorbic acid,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM015,PFOA,United States,Cosmetics,No match in selected source,us_cosmetic_fda,https://www.fda.gov/cosmetics/cosmetics-laws-regulations/prohibited-restricted-ingredients-cosmetics
+CHEM005,Formaldehyde,United States,Cosmetics,Matching source entry,us_fda_hair_smoothing,https://www.fda.gov/cosmetics/cosmetic-products/hair-smoothing-products-release-formaldehyde-when-heated
+CHEM008,Hydroquinone,United States,Cosmetics,Matching source entry,us_fda_otc_skin_lightening,https://www.fda.gov/drugs/drug-safety-communications/fda-works-protect-consumers-potentially-harmful-otc-skin-lightening-products

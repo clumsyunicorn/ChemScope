@@ -1,5 +1,3 @@
-"""Shared functions for loading, cleaning, and saving ChemScope data."""
-
 from __future__ import annotations
 
 from datetime import datetime, timezone

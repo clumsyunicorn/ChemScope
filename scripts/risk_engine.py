@@ -1,4 +1,3 @@
-"""Calculate daily exposure and oral screening values."""
 from __future__ import annotations
 import math
 

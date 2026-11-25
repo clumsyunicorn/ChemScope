@@ -1,5 +1,4 @@
-"""Store official source URLs used by ChemScope."""
-
+# Store official source URLs used by ChemScope
 # Source urls
 
 FDA_FOOD_CSV = 'https://www.hfpappexternal.fda.gov/scripts/fdcc/cfc/XMLService.cfm?method=downloadxls&set=FoodSubstances'

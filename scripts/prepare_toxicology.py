@@ -1,4 +1,3 @@
-"""Prepare toxicology benchmark records from ATSDR."""
 from __future__ import annotations
 import json
 import math

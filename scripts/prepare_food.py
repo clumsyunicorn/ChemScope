@@ -1,4 +1,3 @@
-"""Prepare food regulation records from official sources."""
 from __future__ import annotations
 from collections import Counter, defaultdict
 from html import unescape

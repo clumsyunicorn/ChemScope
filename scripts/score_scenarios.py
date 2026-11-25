@@ -1,5 +1,3 @@
-
-"""Load exposure scenarios and save screening results."""
 from __future__ import annotations
 
 import csv

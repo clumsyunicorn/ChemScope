@@ -1,4 +1,3 @@
-"""Build the ChemScope SQLite database from prepared CSV files."""
 from __future__ import annotations
 import argparse
 import json

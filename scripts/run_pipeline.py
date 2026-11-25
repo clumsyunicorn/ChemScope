@@ -1,4 +1,5 @@
-"""Build ChemScope from saved sources."""
+# Build ChemScope from saved sources.
+
 from __future__ import annotations
 
 import argparse

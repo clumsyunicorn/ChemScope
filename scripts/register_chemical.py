@@ -1,4 +1,3 @@
-"""Register an additional chemical using EPA ChemExpo data."""
 from __future__ import annotations
 
 import argparse

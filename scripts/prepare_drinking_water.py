@@ -1,4 +1,3 @@
-"""Prepare drinking water regulation records for ChemScope."""
 from __future__ import annotations
 import json
 import re

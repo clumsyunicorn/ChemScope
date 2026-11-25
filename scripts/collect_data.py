@@ -1,4 +1,3 @@
-"""Download and verify official ChemScope regulatory source snapshots."""
 from __future__ import annotations
 
 import argparse
@@ -32,7 +31,6 @@ FDA_CAS_COLUMN = 'CAS Reg No (or other ID)'
 
 
 def _download(url, target, *, max_bytes=90_000_000, headers=None):
-    """Stream to a temporary file, never replacing a valid snapshot early."""
     target.parent.mkdir(parents=True, exist_ok=True)
     temp = target.with_suffix('.partial')
     try:
@@ -55,7 +53,6 @@ def _download(url, target, *, max_bytes=90_000_000, headers=None):
 
 
 def get_bulk(url, target, *, refresh=False, expect_zip=False):
-    """Download an original bulk file with basic type checks and safe replacement."""
     def valid(path):
         if not path.exists() or not path.stat().st_size:
             return False
@@ -171,7 +168,6 @@ def _tag(element):
 
 
 def valid_ecfr_xml(path):
-    """Check the complete bulk XML before allowing it to replace an old copy."""
     if not path.exists() or path.stat().st_size < 1_000_000:
         return False
     try:
@@ -292,7 +288,6 @@ def register_ecfr_sections(section_numbers):
 
 
 def render_ecfr_html(section_element, number, source_url):
-    """Render a readable derivative; original unmodified GovInfo XML stays cached."""
     title = f'21 CFR § {number}'
     pieces = []
     for child in section_element:
@@ -323,7 +318,6 @@ def valid_section_html(path, number):
 
 
 def collect_ecfr(source_ids, *, refresh=False, xml_path=None):
-    """Prepare official section HTML files for existing downstream parsers."""
     result = {}
     pending = []
     for source_id in source_ids:
@@ -398,7 +392,6 @@ def valid_eu_legal_html(path, source_id):
 
 
 def collect_eu_legal(source_id, *, refresh=False):
-    """Try equivalent links to the original EU act, never a substituted revision."""
     path = SOURCE_DIR / f'{source_id}.html'
     known = read_manifest().get(source_id, {})
     old_valid = valid_eu_legal_html(path, source_id)

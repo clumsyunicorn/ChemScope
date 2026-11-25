@@ -1,4 +1,3 @@
-"""Prepare cosmetics regulations from the structure of each official source."""
 from __future__ import annotations
 
 import json
@@ -82,9 +81,8 @@ def family_base(text):
     )
     return normalize_name(match.group(1)) if match else ''
 
-
+# Prefer source CAS; use exact names and explicitly named families next.
 def recognize_row(record, identities):
-    """Prefer source CAS; use exact names and explicitly named families next."""
     values = row_values(record)
     names = [value for key, value in values.items()
              if any(word in key.casefold() for word in
@@ -216,9 +214,8 @@ def hotlist_section(label):
     text = normalize_name(label).rstrip(':').strip()
     return HOTLIST_SECTIONS.get(text)
 
-
+# Match ingredients from the prohibited and restricted source tables.
 def canada_hotlist(path, identities):
-    """Match ingredients from the prohibited and restricted source tables."""
     document = read_document(path)
     records, seen_sections = [], set()
     heading = ''
@@ -356,9 +353,8 @@ def annex_footnotes(table):
                 notes[anchor['id']] = marker + ' ' + text
     return notes
 
-
+# Read (a), (b), (c) source cells without assuming a chemical identity.
 def labeled_fields(text):
-    """Read (a), (b), (c) source cells without assuming a chemical identity."""
     value = clean(text)
     markers = list(re.finditer(r'(?<![\w])\(([a-z])\)\s*', value, re.I))
     if not markers or clean(value[:markers[0].start()]):
@@ -372,9 +368,8 @@ def labeled_fields(text):
         found[label] = clean(value[match.end():stop]).strip(' ;,')
     return found
 
-
+# Apply a shared note to all letters listed together in a source cell.
 def labeled_context(text, label):
-    """Apply a shared note to all letters listed together in a source cell."""
     groups = labeled_fields(text)
     if not groups:
         return clean(text)
@@ -388,9 +383,8 @@ def labeled_context(text, label):
             pending = []
     return assigned.get(label, '')
 
-
+# Read several explicit amounts with separate user-group qualifiers.
 def qualified_limits(text):
-    """Read several explicit amounts with separate user-group qualifiers."""
     pattern = re.compile(
         r'(\d+(?:[.,]\d+)?\s*(?:%|ppm))\s+for\s+([^,;.]+)', re.I,
     )
@@ -402,9 +396,8 @@ def qualified_limits(text):
         return []
     return [(clean(item.group(1)), clean(item.group(2))) for item in matches]
 
-
+# Only split an annex row when product labels and limits align.
 def eu_product_variants(original):
-    """Only split an annex row when product labels and limits align."""
     products = labeled_fields(original.get('Product type, body parts', ''))
     limits = labeled_fields(original.get('Maximum concentration in ready for use preparation', ''))
     if not products or not all(products.values()) or not set(limits).issubset(products):
@@ -627,9 +620,8 @@ def normalize_limit_text(text):
     text = re.sub(r'^not exceed(?:ing)?\b', 'no more than', text, flags=re.I)
     return text
 
-
+# Only return individually written comparisons, never a guessed number.
 def numeric_conditions(text):
-    """Only return individually written comparisons, never a guessed number."""
     matches = []
     for match in LIMIT_PATTERN.finditer(text):
         original = clean(match.group(0))
@@ -639,9 +631,8 @@ def numeric_conditions(text):
             matches.append((original, label, number, unit))
     return matches
 
-
+# Permit a second amount only when it is an equivalent unit conversion.
 def compatible_amounts(text, comparison):
-    """Permit a second amount only when it is an equivalent unit conversion."""
     amounts = re.findall(
         r'\d+(?:[.,]\d+)?\s*(?:parts?\s+per\s+million\b|ppm\b|percent\b|%(?!\w))',
         text, re.I,
@@ -679,9 +670,8 @@ def condition_product(text):
         return 'Cosmetics with unavoidable traces'
     return 'Cosmetics described in source passage'
 
-
+# Keep each FDA guidance statement separate from the binding legal text.
 def us_cosmetics(path, identities, *, aliases=None, identity_evidence=None):
-    """Keep each FDA guidance statement separate from the binding legal text."""
     document = read_document(path)
     records = []
     seen = set()

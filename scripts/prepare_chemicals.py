@@ -1,4 +1,3 @@
-"""Match the study chemicals with EPA ChemExpo data."""
 from difflib import SequenceMatcher
 import zipfile
 
